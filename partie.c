@@ -10,69 +10,66 @@ int jouerUnCoup(int choix){
     return choix;
 }
 
-int JoueurVide(int* board){
-    int somme_1 = 0;
-    int somme_2 = 0;
-    for(int i = 0; i < 7;i++){
-        somme_1 += board[i];
+bool adversaireVide(int* board){
+    int somme = 0;
+    int i = 0;
+    //if(Joueur actuel == joueur1){ i = 6} else { i = 0}
+    int fin = i + 7;
+    for(int i = 0; i < i+7 ;i++){
+        somme += board[i];
     }
-    for(int i = 6; i < 13;i++){
-        somme_2 += board[i];
-    }
-    if(somme_1 == 0){
-        printf("Joueur 1 vide\n");
-        return 1;
-    }else if(somme_2 == 0){
-        printf("Joueur 1 vide\n");
-        return 2;
+    
+    if(somme == 0){
+        printf("Adversaire vide\n");
+        return true;
     }else{
-        printf("Aucun joueur vide");
-        return 0;
+        printf("Adversaire non vide\n");
+        return false;
     }
 }
-int famine(int* board){
-    int joueur_vide = JoueurVide(board);
-    switch (joueur_vide)
-    {
-    case 1:
-        int i = 11;
-        while(board[i] + i < 12){
-            i--;
-        }
-        if( i == 6){
-            printf("Famine: Victoire du joueur 2");
-            return 2;
-        }
-        /*for(int j = 0; j < 13; j++){
-            score += board[j];
-        }*/
-        /* code */
-        break;
-    case 2:
-        int i = 5;
-        while(board[i] + i < 6){
-            i--;
-        }
-        if( i == 0){
-            printf("Famine: Victoire du joueur 1");
-            return 1;
-        }
-        /*code*/
-        break;
-    default:
-        break;
+bool famine(int* board){
+    //if(Joueur actuel == joueur1){ i = 5} else { i = 11}
+    int i = 5;
+    int fin = i + 1;
+    while((board[i] + i) < fin){
+        i--;
+    }
+    if( i == fin){
+        printf("Famine\n");
+        return true;
+    }else{
+        return false;
     }
 
 }
 
-bool partieGagnee(int score, int *board){
-
+bool finDePartie(int score, int *board){
+    
     if(score >= 25){
+        printf("fin par score > 25\n");
         return true;
     }else if(famine(board)){
-        
+        printf("fin par famine\n");
+        for(int j = 0; j < 12; j++){
+            score += board[j];
+        }
+        return true;
+    }else if(/*tour_sans_prise_consecutif == 8*/true){
+        print("fin par non prise de graine ");
     }
 
+}
+
+struct Joueur vainqueur(int score, int* board){
+    if(finDePartie(score, board)){
+        if(/*score_j1 > score_j2*/1){
+            printf("Joueur 1 vainqueur");
+        }else if (/*score_j2 > score_j1*/1){
+            printf("Joueur 2 vainqueur");
+        }else{
+            printf("Ikiwake");
+        }
+    }
 }
 
 
