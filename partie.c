@@ -3,15 +3,15 @@
 #include <errno.h>
 #include <string.h>
 
-void jouerUnCoup(){
-    int case;
-    scanf("Choisissez une case %d",case);
-    printf("case choisie: %d", case);
+int jouerUnCoup(int choix){
+    printf("choissisez une case: ");
+    scanf("%d",&choix);
+    return choix;
 }
 
 
 int main(int argc, char **argv){
-
-    jouerUnCoup();
+    int choix = 0;
+    jouerUnCoup(choix);
     return 0;
 }
