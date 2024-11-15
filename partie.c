@@ -70,7 +70,7 @@ bool adversaireVide(struct Partie *partie) {
     }
 }
 bool famine(struct Partie *partie){
-    int i = (partie->joueur1 == partie->joueur_actuel) ? 5 : 11;
+    /*int i = (partie->joueur1 == partie->joueur_actuel) ? 5 : 11;
     int fin = i + 1;
     while((partie->plateau->plateau[i] + i) < fin){
         i--;
@@ -80,8 +80,23 @@ bool famine(struct Partie *partie){
         return true;
     }else{
         return false;
-    }
+    }*/
+    int debut = (partie->joueur1 == partie->joueur_actuel) ? 0 : 6;
+    int fin = debut + 6;
 
+    for (int i = debut; i < fin; i++) {
+        int graines = partie->plateau->plateau[i];
+        if (graines > 0) {
+            int positionFinale = (i + graines) % 12; // Position finale après le semis
+            if ((partie->joueur1 == partie->joueur_actuel && positionFinale >= 6) ||
+                (partie->joueur1 != partie->joueur_actuel && positionFinale < 6)) {
+                // Si la dernière graine tombe dans le camp adverse
+                return false;
+            }
+        }
+    }
+    printf("Famine\n");
+    return true;
 }
 
 bool finDePartie(struct Partie *partie) {
