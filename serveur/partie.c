@@ -5,7 +5,7 @@
 #include "partie.h"
 #include "joueur.h"
 
-struct Joueur* tirage_au_sort(struct Partie *partie) {
+struct Joueur* tirage_au_sort(Partie *partie) {
     int joueur_num = rand() % 2;
     if (joueur_num == 0) {
         printf("Joueur 1 commence\n");
@@ -52,7 +52,7 @@ void capture(int last_position, int* plateau, struct Joueur *joueur) {
 }
 
 
-bool adversaireVide(struct Partie *partie) {
+bool adversaireVide(Partie *partie) {
     int somme = 0;
     int debut = (partie->joueur1 == partie->joueur_actuel) ? 6 : 0;
     int fin = debut + 6;
@@ -69,7 +69,7 @@ bool adversaireVide(struct Partie *partie) {
         return false;
     }
 }
-bool famine(struct Partie *partie){
+bool famine(Partie *partie){
     /*int i = (partie->joueur1 == partie->joueur_actuel) ? 5 : 11;
     int fin = i + 1;
     while((partie->plateau->plateau[i] + i) < fin){
@@ -99,7 +99,7 @@ bool famine(struct Partie *partie){
     return true;
 }
 
-bool finDePartie(struct Partie *partie) {
+bool finDePartie(Partie *partie) {
 
     if (partie->joueur1->score >= 25 || partie->joueur2->score >= 25) {
         printf("Fin de partie : score supérieur à 25\n");
@@ -125,7 +125,7 @@ bool finDePartie(struct Partie *partie) {
 }
 
 
-struct Joueur* vainqueur(struct Partie *partie) {
+struct Joueur* vainqueur(Partie *partie) {
     if (finDePartie(partie)) {
         if (partie->joueur1->score > partie->joueur2->score) {
             printf("Joueur 1 vainqueur\n");
@@ -141,7 +141,7 @@ struct Joueur* vainqueur(struct Partie *partie) {
     return NULL;
 }
 void lancer_partie(void){
-    struct Partie *partie_en_cours;
+    Partie *partie_en_cours;
     struct Board *board = (struct Board *)malloc(sizeof(struct Board));
     if (board == NULL) {
         printf("Erreur d'allocation mémoire\n");
@@ -153,7 +153,7 @@ void lancer_partie(void){
     init_joueur(joueura, "Joueur 1");
     init_joueur(joueurb, "Joueur 2");
 
-    partie_en_cours = (struct Partie *)malloc(sizeof(struct Partie));
+    partie_en_cours = (struct Partie *)malloc(sizeof(Partie));
     partie_en_cours->plateau = board;
     partie_en_cours->joueur1 = joueura;
     partie_en_cours->joueur2 = joueurb;
