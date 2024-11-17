@@ -134,38 +134,43 @@ static void app(void)
                      else if (strcmp(buffer, "PARTIE") == 0) {
                         strncpy(buffer, "ALEATOIRE ou CHOISIR adversaire ?", BUF_SIZE - 1);
                         write_client(client.sock, buffer);
-                     }
-                     else if (strcmp(buffer, "ALEATOIRE") == 0) {
-                        int found = 0;
-                        for (int j = 0; j < actual; j++) {
-                           if (clients[j].etat == MENU && clients[j].sock != clients[i].sock) {
-                                 clients[i].etat = PARTIE;
-                                 clients[j].etat = PARTIE;
-
-                                 snprintf(buffer, BUF_SIZE, "Une partie a été trouvée avec %s. La partie démarre !\n", clients[j].name);
-                                 write_client(clients[i].sock, buffer);
-
-                                 snprintf(buffer, BUF_SIZE, "Une partie a été trouvée avec %s. La partie démarre !\n", clients[i].name);
-                                 write_client(clients[j].sock, buffer);
-
+                        read_client(clients[i].sock, buffer);
+                        if (strcmp(buffer, "ALEATOIRE") == 0) {
+                           int found = 0;
+                           for (int j = 0; j < actual; j++) {
+                              if (clients[j].etat == MENU && clients[j].sock != clients[i].sock) {
                                  found = 1;
-                                 break;
-                           }
-                        }
+                                 int choix = choix_partie(clients[i],clients[j], clients, actual,buffer);
+                                 if(!choix){
+                                    break;
+                                 }
+                                 
 
-                        if (!found) {
-                           strncpy(buffer, "Aucun joueur disponible pour une partie.\n", BUF_SIZE - 1);
-                           write_client(client.sock, buffer);
-                           choisir_option(clients[i], clients, actual);
+                              }
+                              if (!found) {
+                                 strncpy(buffer, "Aucun joueur disponible pour une partie.\n", BUF_SIZE - 1);
+                                 write_client(client.sock, buffer);
+                                 choisir_option(clients[i], clients, actual);
+                              }
+                           }
+                           break;
+                           
+                        }else if (strcmp(buffer, "CHOISIR") == 0) {
+                           char client_dispos_list[BUF_SIZE];
+                           list_clients_dispos(clients[i], clients, actual, client_dispos_list);
+                           strncat(buffer,"\n", BUF_SIZE - strlen(client_dispos_list) - 1);
+                           write_client(client.sock, client_dispos_list);
+                           read_client(clients[i].sock,buffer);
+                           for(int j = 0; j < actual; j++){
+                              if(!strcmp(clients[j].name,buffer)){
+                                 choix_partie(clients[i],clients[j],clients,actual,buffer);
+                                 break;
+                              }
+                           }
+                           
                         }
                      }
-                     else if (strcmp(buffer, "CHOISIR") == 0) {
-                        char client_list[BUF_SIZE];
-                        list_clients_dispos(clients[i], clients, actual, client_list);
-                        strncat(buffer,"\n", BUF_SIZE - strlen(client_list) - 1);
-                        write_client(client.sock, client_list);
-                        clients[i].etat = PARTIE;
-                     }
+                     
                      else {
                         send_message_to_all_clients(clients, client, actual, buffer, 0);
                      }
@@ -184,6 +189,31 @@ static void app(void)
    end_connection(sock);
 }
 
+int choix_partie(Client client_demandeur, Client client_repondeur, Client* clients, int actual, char* buffer){
+   snprintf(buffer, BUF_SIZE, "Une partie est proposée avec %s. En attente d'acceptation\n", client_repondeur.name);
+   write_client(client_demandeur.sock, buffer);
+   snprintf(buffer, BUF_SIZE, "Une partie a été proposée par %s. ACCEPTER ou REFUSER ?\n", client_demandeur.name);
+   write_client(client_repondeur.sock, buffer);
+   read_client(client_repondeur.sock, buffer);
+   if(strcmp(buffer, "ACCEPTER") == 0){
+      client_demandeur.etat = PARTIE;
+      client_repondeur.etat = PARTIE;
+      snprintf(buffer, BUF_SIZE, "Partie avec %s acceptée. La partie va commencer...\n", client_repondeur.name);
+      write_client(client_demandeur.sock, buffer);
+      snprintf(buffer, BUF_SIZE, "Partie avec %s acceptée. La partie va commencer\n", client_demandeur.name);
+      write_client(client_repondeur.sock, buffer);
+      return 1;
+   }else{
+      snprintf(buffer, BUF_SIZE, "Partie avec %s refusée.\n", client_repondeur.name);
+      write_client(client_demandeur.sock, buffer);
+      choisir_option(client_demandeur, clients, actual);
+
+      snprintf(buffer, BUF_SIZE, "Partie avec %s refusée.\n", client_demandeur.name);
+      write_client(client_repondeur.sock, buffer);
+      choisir_option(client_repondeur, clients, actual);
+      return 0;
+   }
+}
 void list_clients(Client *clients, int actual, char *buffer) {
     int i;
     strcpy(buffer, "Joueurs connectés :\n");
@@ -197,7 +227,7 @@ void list_clients_dispos(Client c, Client *clients, int actual, char *buffer) {
     int i;
     strcpy(buffer, "Choisissez votre adversaire :\n");
     for (i = 0; i < actual; i++) {
-      if (clients[i].etat == MENU && clients[i].name!=c.name){
+      if (clients[i].etat == MENU && strcmp(clients[i].name,c.name)){
         strncat(buffer, clients[i].name, BUF_SIZE - strlen(buffer) - 1);
         strncat(buffer, "\n", BUF_SIZE - strlen(buffer) - 1);
       }
@@ -206,10 +236,9 @@ void list_clients_dispos(Client c, Client *clients, int actual, char *buffer) {
 
 
 void choisir_option(Client c, Client *clients, int actual){
-         char buffer[BUF_SIZE];
-         strncpy(buffer,"Bienvenue dans Awale !\nVeuillez choisir une option :\n1.Afficher tous les joueurs présents, tapez 'LISTE'\n2. Jouer à Awale, tapez PARTIE\n" , BUF_SIZE - 1);
-         
-         write_client(c.sock, buffer);
+      char buffer[BUF_SIZE];
+      strncpy(buffer,"Bienvenue dans Awale !\nVeuillez choisir une option :\n1.Afficher tous les joueurs présents, tapez 'LISTE'\n2. Jouer à Awale, tapez PARTIE\n" , BUF_SIZE - 1);
+      write_client(c.sock, buffer);
 }
 
 static void clear_clients(Client *clients, int actual)
