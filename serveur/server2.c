@@ -135,8 +135,8 @@ static void app(void)
                         strncpy(buffer, "ALEATOIRE ou CHOISIR adversaire ?", BUF_SIZE - 1);
                         write_client(client.sock, buffer);
                         read_client(clients[i].sock, buffer);
+                        int found = 0;
                         if (strcmp(buffer, "ALEATOIRE") == 0) {
-                           int found = 0;
                            for (int j = 0; j < actual; j++) {
                               if (clients[j].etat == MENU && clients[j].sock != clients[i].sock) {
                                  found = 1;
@@ -156,6 +156,7 @@ static void app(void)
                            break;
                            
                         }else if (strcmp(buffer, "CHOISIR") == 0) {
+                           
                            char client_dispos_list[BUF_SIZE];
                            list_clients_dispos(clients[i], clients, actual, client_dispos_list);
                            strncat(buffer,"\n", BUF_SIZE - strlen(client_dispos_list) - 1);
@@ -164,15 +165,24 @@ static void app(void)
                            for(int j = 0; j < actual; j++){
                               if(!strcmp(clients[j].name,buffer)){
                                  choix_partie(clients[i],clients[j],clients,actual,buffer);
+                                 found = 1;
                                  break;
                               }
                            }
+                           if (!found) {
+                                 strncpy(buffer, "Aucun joueur libre correspondant.\n", BUF_SIZE - 1);
+                                 write_client(client.sock, buffer);
+                                 choisir_option(clients[i], clients, actual);
+                              }
                            
+                        }else{
+                           write_client(clients[i].sock,"Choix indisponible, retou au menu\n");
+                           choisir_option(clients[i], clients, actual);
                         }
-                     }
-                     
-                     else {
-                        send_message_to_all_clients(clients, client, actual, buffer, 0);
+                     }else {
+                        //send_message_to_all_clients(clients, client, actual, buffer, 0);
+                        write_client(clients[i].sock,"Choix indisponible\n");
+                        choisir_option(clients[i], clients, actual);
                      }
                   }
                   else if (clients[i].etat == PARTIE){
@@ -203,7 +213,7 @@ int choix_partie(Client client_demandeur, Client client_repondeur, Client* clien
       snprintf(buffer, BUF_SIZE, "Partie avec %s acceptée. La partie va commencer\n", client_demandeur.name);
       write_client(client_repondeur.sock, buffer);
       return 1;
-   }else{
+   }else if(strcmp(buffer, "REFUSER") == 0){
       snprintf(buffer, BUF_SIZE, "Partie avec %s refusée.\n", client_repondeur.name);
       write_client(client_demandeur.sock, buffer);
       choisir_option(client_demandeur, clients, actual);
@@ -212,6 +222,8 @@ int choix_partie(Client client_demandeur, Client client_repondeur, Client* clien
       write_client(client_repondeur.sock, buffer);
       choisir_option(client_repondeur, clients, actual);
       return 0;
+   }else{
+      choix_partie(client_demandeur, client_repondeur, clients, actual, buffer);
    }
 }
 void list_clients(Client *clients, int actual, char *buffer) {
@@ -237,7 +249,7 @@ void list_clients_dispos(Client c, Client *clients, int actual, char *buffer) {
 
 void choisir_option(Client c, Client *clients, int actual){
       char buffer[BUF_SIZE];
-      strncpy(buffer,"Bienvenue dans Awale !\nVeuillez choisir une option :\n1.Afficher tous les joueurs présents, tapez 'LISTE'\n2. Jouer à Awale, tapez PARTIE\n" , BUF_SIZE - 1);
+      strncpy(buffer,"\nBienvenue dans Awale !\nVeuillez choisir une option :\n1.Afficher tous les joueurs présents, tapez 'LISTE'\n2. Jouer à Awale, tapez PARTIE\n" , BUF_SIZE - 1);
       write_client(c.sock, buffer);
 }
 
