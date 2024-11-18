@@ -1,11 +1,11 @@
 #ifndef JOUEUR_H
 #define JOUEUR_H
 
-struct Joueur {
+typedef struct Joueur {
     int score;
     char pseudo[16];
-};
+}Joueur;
 
-void init_joueur(struct Joueur *joueur, const char *pseudo);
+void init_joueur(Joueur *joueur, const char *pseudo);
 
 #endif

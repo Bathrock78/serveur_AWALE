@@ -5,7 +5,8 @@
 
 typedef enum {
     MENU, 
-    PARTIE,
+    PARTIE_TOUR,
+    PARTIE_ATTENTE,
 } State;
 
 typedef struct
@@ -13,6 +14,7 @@ typedef struct
    SOCKET sock;
    char name[BUF_SIZE];
    State etat;
+   int num_partie;
 }Client;
 
 

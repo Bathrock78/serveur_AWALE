@@ -5,7 +5,7 @@
 #include "partie.h"
 #include "joueur.h"
 
-struct Joueur* tirage_au_sort(Partie *partie) {
+Joueur* tirage_au_sort(Partie *partie) {
     int joueur_num = rand() % 2;
     if (joueur_num == 0) {
         printf("Joueur 1 commence\n");
@@ -16,7 +16,7 @@ struct Joueur* tirage_au_sort(Partie *partie) {
     }
 }
 
-bool deplacement(int position, struct Board *board, struct Joueur *joueur) {
+bool deplacement(int position, struct Board *board, Joueur *joueur) {
     if (board->plateau[position] == 0) {
         printf("Case sélectionnée vide\n");
         return false;
@@ -43,7 +43,7 @@ bool deplacement(int position, struct Board *board, struct Joueur *joueur) {
     return true;
 }
 
-void capture(int last_position, int* plateau, struct Joueur *joueur) {
+void capture(int last_position, int* plateau, Joueur *joueur) {
     while (plateau[last_position] == 2 || plateau[last_position] == 3) {
         joueur->score += plateau[last_position];
         plateau[last_position] = 0;
@@ -125,7 +125,7 @@ bool finDePartie(Partie *partie) {
 }
 
 
-struct Joueur* vainqueur(Partie *partie) {
+Joueur* vainqueur(Partie *partie) {
     if (finDePartie(partie)) {
         if (partie->joueur1->score > partie->joueur2->score) {
             printf("Joueur 1 vainqueur\n");
@@ -140,7 +140,8 @@ struct Joueur* vainqueur(Partie *partie) {
     }
     return NULL;
 }
-void lancer_partie(void){
+
+Partie* init_partie(const char* pseudo1, const char * pseudo2){
     Partie *partie_en_cours;
     struct Board *board = (struct Board *)malloc(sizeof(struct Board));
     if (board == NULL) {
@@ -148,11 +149,10 @@ void lancer_partie(void){
     }
     
     init_board(board);
-    struct Joueur *joueura = (struct Joueur *)malloc(sizeof(struct Joueur));
-    struct Joueur *joueurb = (struct Joueur *)malloc(sizeof(struct Joueur));
-    init_joueur(joueura, "Joueur 1");
-    init_joueur(joueurb, "Joueur 2");
-
+    Joueur *joueura = (Joueur *)malloc(sizeof(Joueur));
+    Joueur *joueurb = (Joueur *)malloc(sizeof(Joueur));
+    init_joueur(joueura, pseudo1);
+    init_joueur(joueurb, pseudo2);
     partie_en_cours = (struct Partie *)malloc(sizeof(Partie));
     partie_en_cours->plateau = board;
     partie_en_cours->joueur1 = joueura;
@@ -161,11 +161,15 @@ void lancer_partie(void){
 
     partie_en_cours->joueur_actuel = tirage_au_sort(partie_en_cours);
 
+    return partie_en_cours;
+}
+/*void lancer_partie(Partie partie_en_cours,int choix){
+
     while (!finDePartie(partie_en_cours)) {
-        afficher_plateau(board);
-        printf("Tour de %s (score : %d)\n", partie_en_cours->joueur_actuel->pseudo, partie_en_cours->joueur_actuel->score);
+        //afficher_plateau(board);
+        //printf("Tour de %s (score : %d)\n", partie_en_cours->joueur_actuel->pseudo, partie_en_cours->joueur_actuel->score);
         
-        int choix;
+        /*int choix;
         printf("Choisissez une case : ");
         scanf("%d", &choix);
 
@@ -188,13 +192,16 @@ void lancer_partie(void){
         partie_en_cours->joueur_actuel = (partie_en_cours->joueur_actuel == partie_en_cours->joueur1) ? partie_en_cours->joueur2 : partie_en_cours->joueur1;
     }
 
-    struct Joueur *gagnant = vainqueur(partie_en_cours);
+    Joueur *gagnant = vainqueur(partie_en_cours);
     if (gagnant != NULL) {
         printf("Le gagnant est %s avec %d points!\n", gagnant->pseudo, gagnant->score);
     }
 
-    free(board);
-    free(joueura);
-    free(joueurb);
-    free(partie_en_cours);
+}*/
+
+void end_partie(Partie* partie){
+    free(partie->plateau);
+    free(partie->joueur1);
+    free(partie->joueur2);
+    free(partie);
 }
