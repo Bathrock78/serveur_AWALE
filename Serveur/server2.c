@@ -175,6 +175,7 @@ static void app(void)
                                 partie->client_2 = j;
 
                                 actual_partie++;
+                                sauvegarder_partie("Data/sauvegardes.csv",partie);
                                 
                                 if (!strcmp(partie->joueur_actuel->pseudo, clients[i].name)){
                                     strncpy(buffer, "C'est à toi de jouer !\n", BUF_SIZE - 1);

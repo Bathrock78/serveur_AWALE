@@ -2,13 +2,13 @@
 #include <stdbool.h>
 #include "plateau.h"
 
-void init_board(struct Board *board) {
+void init_board(Plateau *board) {
     for (int i = 0; i < 12; i++) {
         board->plateau[i] = 4;
     }
 }
 
-void afficher_plateau(char* buffer, int BUF_SIZE, struct Board *board, int score1, const char* pseudo1, int score2, const char* pseudo2) {
+void afficher_plateau(char* buffer, int BUF_SIZE, Plateau *board, int score1, const char* pseudo1, int score2, const char* pseudo2) {
     strncpy(buffer, "\n", BUF_SIZE - 1);
     char mini_buffer[BUF_SIZE];
     snprintf(mini_buffer, BUF_SIZE, "Score : %s - %d | %s - %d\n", pseudo1, score1, pseudo2, score2);

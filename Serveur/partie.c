@@ -4,6 +4,7 @@
 #include "plateau.h"
 #include "partie.h"
 #include "joueur.h"
+#include <unistd.h>
 
 Joueur* tirage_au_sort(Partie *partie) {
     int joueur_num = rand() % 2;
@@ -16,7 +17,7 @@ Joueur* tirage_au_sort(Partie *partie) {
     }
 }
 
-bool deplacement(int position, struct Board *board, Joueur *joueur) {
+bool deplacement(int position, Plateau *board, Joueur *joueur) {
     if (board->plateau[position] == 0) {
         printf("Case sélectionnée vide\n");
         return false;
@@ -143,7 +144,7 @@ Joueur* vainqueur(Partie *partie) {
 
 Partie* init_partie(const char* pseudo1, const char * pseudo2){
     Partie *partie_en_cours;
-    struct Board *board = (struct Board *)malloc(sizeof(struct Board));
+    Plateau *board = (Plateau *)malloc(sizeof(Plateau));
     if (board == NULL) {
         printf("Erreur d'allocation mémoire\n");
     }
@@ -204,4 +205,35 @@ void end_partie(Partie* partie){
     free(partie->joueur1);
     free(partie->joueur2);
     free(partie);
+}
+
+void sauvegarder_partie(const char *nomFichier, Partie *partie) {
+    FILE *fichier;
+    int fichierExiste = (access(nomFichier, F_OK) == 0); // Vérifie si le fichier existe déjà
+
+    // Ouvre en mode ajout (a), crée le fichier s'il n'existe pas
+    fichier = fopen(nomFichier, "a");
+    if (fichier == NULL) {
+        perror("Erreur lors de l'ouverture du fichier");
+        exit(EXIT_FAILURE);
+    }
+
+    // Si le fichier n'existe pas, écrire les en-têtes
+    if (!fichierExiste) {
+        fprintf(fichier, "PartieID,Case1,Case2,Case3,Case4,Case5,Case6,Case7,Case8,Case9,Case10,Case11,Case12,\
+        ScoreJoueur1,ScoreJoueur2,Joueur1,Joueur2,JoueurTour\n");
+    }
+    // Écrire les données
+    for (int i = 0; i < 12; i++) {
+        fprintf(fichier, "%d,", partie->plateau->plateau[i]);
+    }
+    fprintf(fichier, "%d,%d,%s,%s,%s\n",
+            partie->joueur1->score,
+            partie->joueur2->score,
+            partie->joueur1->pseudo,
+            partie->joueur2->pseudo,
+            partie->joueur_actuel->pseudo);
+
+    fclose(fichier);
+    printf("Partie entre %s et %s sauvegardée dans %s\n",partie->joueur1->pseudo,partie->joueur2->pseudo, nomFichier);
 }

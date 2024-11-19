@@ -4,8 +4,8 @@
 #include "plateau.h"
 #include "joueur.h"
 
-typedef struct { 
-    struct Board *plateau;
+typedef struct Partie { 
+    Plateau *plateau;
     Joueur *joueur1;
     Joueur *joueur2;
     Joueur *joueur_actuel;
@@ -15,13 +15,14 @@ typedef struct {
 }Partie ;
 
 Joueur* tirage_au_sort(Partie *partie);
-bool deplacement(int position, struct Board *board, Joueur *joueur);
+bool deplacement(int position, Plateau *board, Joueur *joueur);
 void capture(int last_position, int *plateau, Joueur *joueur); 
 bool adversaireVide(Partie *partie);
 bool famine(Partie *partie);
 bool finDePartie(Partie *partie);
 Joueur* vainqueur(Partie *partie);
 void end_partie(Partie* partie);
+void sauvegarder_partie(const char *nomFichier, Partie *partie);
 Partie* init_partie(const char* pseudo1, const char * pseudo2);
 
 #endif
