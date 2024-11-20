@@ -220,8 +220,7 @@ void sauvegarder_partie(const char *nomFichier, Partie *partie) {
 
     // Si le fichier n'existe pas, écrire les en-têtes
     if (!fichierExiste) {
-        fprintf(fichier, "PartieID,Case1,Case2,Case3,Case4,Case5,Case6,Case7,Case8,Case9,Case10,Case11,Case12,\
-        ScoreJoueur1,ScoreJoueur2,Joueur1,Joueur2,JoueurTour\n");
+        fprintf(fichier, "PartieID,Case1,Case2,Case3,Case4,Case5,Case6,Case7,Case8,Case9,Case10,Case11,Case12,ScoreJoueur1,ScoreJoueur2,Joueur1,Joueur2,JoueurTour\n");
     }
     // Écrire les données
     for (int i = 0; i < 12; i++) {

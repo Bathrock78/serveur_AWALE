@@ -4,12 +4,16 @@
 #include "server2.h"
 
 typedef enum {
-    MENU, 
+    MENU,
+    MENU_TYPE_PARTIE,
+    MENU_CHOIX_ADVERSAIRE,
+    REPONDRE_DEMANDE_PARTIE,
+    ATT_REPONSE_PARTIE,
     PARTIE_TOUR,
     PARTIE_ATTENTE,
 } State;
 
-typedef struct
+typedef struct Client
 {
    SOCKET sock;
    char name[BUF_SIZE];

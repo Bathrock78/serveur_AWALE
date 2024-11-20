@@ -145,57 +145,39 @@ static void app(void)
                }
                
                if (c > 0) {
-                  if (clients[i].etat==MENU){
-                     if (strcmp(buffer, "LISTE") == 0) {
-                        char client_list[BUF_SIZE];
-                        list_clients(clients, actual, client_list);
-                        strncat(client_list,"\n", BUF_SIZE - strlen(client_list) - 1);
-                        write_client(client.sock, client_list);
-                        choisir_option(clients[i]);
-                     } 
-                     else if (strcmp(buffer, "PARTIE") == 0) {
-                        strncpy(buffer, "ALEATOIRE ou CHOISIR adversaire ?", BUF_SIZE - 1);
-                        write_client(client.sock, buffer);
-                        read_client(clients[i].sock, buffer);
+                  switch(clients[i].etat){
+                     case MENU:
+                        if (strcmp(buffer, "LISTE") == 0) {
+                           char client_list[BUF_SIZE];
+                           list_clients(clients, actual, client_list);
+                           strncat(client_list,"\n", BUF_SIZE - strlen(client_list) - 1);
+                           write_client(client.sock, client_list);
+                           choisir_option(clients[i]);
+                        }else if (strcmp(buffer, "PARTIE") == 0) {
+                           strncpy(buffer, "ALEATOIRE ou CHOISIR adversaire ?", BUF_SIZE - 1);
+                           write_client(client.sock, buffer);
+                           clients[i].etat = MENU_TYPE_PARTIE;
+                        }else{
+                           strncpy(buffer, "Choix indisponible", BUF_SIZE - 1);
+                           write_client(client.sock, buffer);
+                        }
+                        break;
+
+                     case MENU_TYPE_PARTIE:
                         int found = 0;
                         if (strcmp(buffer, "ALEATOIRE") == 0) {
                            for (int j = 0; j < actual; j++) {
                               if (clients[j].etat == MENU && clients[j].sock != clients[i].sock) {
                                  found = 1;
-                                 /*int choix = choix_partie(clients[i],clients[j], clients, actual,buffer);
-                                 if(!choix){
-                                    break;
-                                 }*/
+                                 //[i].etat = ATT_REPONSE_PARTIE;
+                                 Partie* partie = init_partie(clients[i].name, clients[j].name);
+                                 partie->client_1 = i;
+                                 partie->client_2 = j;
+                                 choix_partie(clients[i],clients[j]);
+                                 clients[j].etat = REPONDRE_DEMANDE_PARTIE; 
+                                 
                                 
-                                Partie* partie = init_partie(clients[i].name, clients[j].name);
-                                parties_en_cours[actual_partie] = partie;
-                                clients[i].num_partie = actual_partie;
-                                clients[j].num_partie = actual_partie;
-                                partie->client_1 = i;
-                                partie->client_2 = j;
-
-                                actual_partie++;
-                                sauvegarder_partie("Data/sauvegardes.csv",partie);
                                 
-                                if (!strcmp(partie->joueur_actuel->pseudo, clients[i].name)){
-                                    strncpy(buffer, "C'est à toi de jouer !\n", BUF_SIZE - 1);
-                                    write_client(clients[i].sock, buffer);
-                                    strncpy(buffer, "L'adversaire commence!\n", BUF_SIZE - 1);
-                                    write_client(clients[j].sock, buffer);
-                                    clients[i].etat = PARTIE_TOUR;
-                                    clients[j].etat = PARTIE_ATTENTE;
-                                }
-                                else{
-                                    strncpy(buffer, "C'est à toi de jouer !\n", BUF_SIZE - 1);
-                                    write_client(clients[j].sock, buffer);
-                                    strncpy(buffer, "L'adversaire commence !\n", BUF_SIZE - 1);
-                                    write_client(clients[i].sock, buffer);
-                                    clients[j].etat = PARTIE_TOUR;
-                                    clients[i].etat = PARTIE_ATTENTE;
-                                }
-                                afficher_plateau(buffer_plateau, BUF_SIZE, partie->plateau, partie->joueur1->score, partie->joueur1->pseudo, partie->joueur2->score, partie->joueur2->pseudo);
-                                write_client(clients[i].sock, buffer_plateau);
-                                write_client(clients[j].sock, buffer_plateau);
                                 break; 
 
                               }
@@ -204,41 +186,164 @@ static void app(void)
                               strncpy(buffer, "Aucun joueur disponible pour une partie.\n", BUF_SIZE - 1);
                               write_client(client.sock, buffer);
                               choisir_option(clients[i]);
+                              clients[i].etat = MENU;
                            }
                            
-                           break;
-                           
                         }else if (strcmp(buffer, "CHOISIR") == 0) {
-                           
                            char client_dispos_list[BUF_SIZE];
                            list_clients_dispos(clients[i], clients, actual, client_dispos_list);
                            strncat(buffer,"\n", BUF_SIZE - strlen(client_dispos_list) - 1);
                            write_client(client.sock, client_dispos_list);
-                           read_client(clients[i].sock,buffer);
-                           for(int j = 0; j < actual; j++){
-                              if(!strcmp(clients[j].name,buffer)){
-                                 choix_partie(clients[i],clients[j],clients,actual,buffer);
-                                 found = 1;
-                                 break;
-                              }
-                           }
-                           if (!found) {
-                                 strncpy(buffer, "Aucun joueur libre correspondant.\n", BUF_SIZE - 1);
-                                 write_client(client.sock, buffer);
-                                 choisir_option(clients[i]);
-                              }
-                           
-                        }else{
-                           write_client(clients[i].sock,"Choix indisponible, retou au menu\n");
-                           choisir_option(clients[i]);
+                           clients[i].etat = MENU_CHOIX_ADVERSAIRE;
                         }
-                     }else {
-                        //send_message_to_all_clients(clients, client, actual, buffer, 0);
-                        write_client(clients[i].sock,"Choix indisponible\n");
-                        choisir_option(clients[i]);
-                     }
+
+                        break;
+
+                     case MENU_CHOIX_ADVERSAIRE:
+                        for(int j = 0; j < actual; j++){
+                           if(!strcmp(clients[j].name,buffer)){
+                              //choix_partie(clients[i],clients[j],clients,actual,buffer);
+                              found = 1;
+                              break;
+                           }
+                        }
+                        if (!found) {
+                           strncpy(buffer, "Aucun joueur libre correspondant.\n", BUF_SIZE - 1);
+                           write_client(client.sock, buffer);
+                           choisir_option(clients[i]);
+                           clients[i].etat = MENU;
+                        }
+                        break;
+
+                     case PARTIE_ATTENTE:
+                        Partie* partie = parties_en_cours[clients[i].num_partie];
+                        strncpy(buffer, "En attente coup adversaire !", BUF_SIZE - 1);
+                        write_client(clients[i].sock, buffer);
+                        break;
+
+                     case PARTIE_TOUR:
+                        int choix = atoi(buffer);
+                        partie = parties_en_cours[clients[i].num_partie];
+                        //Choix de la case à jouer
+                        
+                        if (choix < 1 || choix > 12) {
+                           strncpy(buffer, "Choix invalide. Veuillez choisir une case entre 1 et 12.\n", BUF_SIZE - 1);
+                           write_client(clients[i].sock, buffer);
+                           //break;
+                           
+                        }
+
+                        if ((partie->joueur_actuel == partie->joueur1 && (choix < 1 || choix > 6)) ||
+                        (partie->joueur_actuel == partie->joueur2 && (choix < 7 || choix > 12))) {
+                           strncpy(buffer, "Choix invalide. Vous devez choisir une case de votre propre camp.\n", BUF_SIZE - 1);
+                           write_client(clients[i].sock, buffer);
+                           //break;
+                        }
+
+                        if (!deplacement(choix - 1, partie->plateau, partie->joueur_actuel)) {
+                           strncpy(buffer, "Déplacement non valide, choisissez une autre case.\n", BUF_SIZE - 1);
+                           write_client(clients[i].sock, buffer);
+                           //break;
+                        }
+                        if(!finDePartie(partie)){
+                           clients[i].etat = PARTIE_ATTENTE;
+                           Client adv;
+                           if (partie->client_1 == i){
+                              adv = clients[partie->client_2];
+                           }
+                           else{
+                              adv = clients[partie->client_1];
+                           }
+                           adv.etat = PARTIE_TOUR;
+                           
+
+                           afficher_plateau(buffer_plateau, BUF_SIZE, partie->plateau, partie->joueur1->score, partie->joueur1->pseudo, partie->joueur2->score, partie->joueur2->score);
+                           write_client(clients[i].sock, buffer_plateau);
+                           write_client(adv.sock, buffer_plateau);
+                           strncpy(buffer, "En attente coup adversaire !", BUF_SIZE - 1);
+                           write_client(clients[i].sock, buffer);
+                           strncpy(buffer, "A ton tour ! \n", BUF_SIZE - 1);
+                           write_client(adv.sock, buffer);
+                           partie->joueur_actuel = (partie->joueur_actuel == partie->joueur1) ? partie->joueur2 : partie->joueur1;
+                        }else{
+                           Joueur *gagnant = vainqueur(partie);
+                           if (gagnant != NULL) {
+                              snprintf(buffer, BUF_SIZE, "Le gagnant est %s avec %d points!\n", gagnant->pseudo,gagnant->score); 
+                              write_client(clients[i].sock, buffer);
+                           }
+                           else{
+                              strncpy(buffer, "IKIWAKE\n", BUF_SIZE - 1);
+                              write_client(clients[i].sock, buffer);
+                           }   
+                           end_partie(&partie); 
+                           //memmov(partie)
+                           clients[i].num_partie = -1;
+                           clients[i].etat = MENU;
+                           //maybe mettre l'état de l'adversaire à menu aussi
+                           choisir_option(clients[i]);
+                           
+                        }
+                        break;
+                     
+                     case REPONDRE_DEMANDE_PARTIE:
+                           Client adv = clients[partie->client_2];
+                        if(strcmp(buffer, "ACCEPTER") == 0){
+                           
+                           strcpy(buffer, "Partie avec acceptée. La partie va commencer...\n");
+                           write_client(clients[i].sock, buffer);
+                           parties_en_cours[actual_partie] = partie;
+                           clients[i].num_partie = actual_partie;
+                           adv.num_partie = actual_partie;
+                           actual_partie++;
+                           sauvegarder_partie("Data/sauvegardes.csv",partie);
+                           clients[i].etat = PARTIE_TOUR;
+                           adv.etat = PARTIE_ATTENTE;
+                           
+                           if (!strcmp(partie->joueur_actuel->pseudo, clients[i].name)){
+                              strncpy(buffer, "C'est à toi de jouer !\n", BUF_SIZE - 1);
+                              write_client(clients[i].sock, buffer);
+                              strncpy(buffer, "L'adversaire commence!\n", BUF_SIZE - 1);
+                              write_client(adv.sock, buffer);
+                              clients[i].etat = PARTIE_TOUR;
+                              adv.etat = PARTIE_ATTENTE;
+                           }
+                           else{
+                              strncpy(buffer, "C'est à toi de jouer !\n", BUF_SIZE - 1);
+                              write_client(adv.sock, buffer);
+                              strncpy(buffer, "L'adversaire commence !\n", BUF_SIZE - 1);
+                              write_client(clients[i].sock, buffer);
+                              adv.etat = PARTIE_TOUR;
+                              clients[i].etat = PARTIE_ATTENTE;
+                           }
+                           afficher_plateau(buffer_plateau, BUF_SIZE, partie->plateau, partie->joueur1->score, partie->joueur1->pseudo, partie->joueur2->score, partie->joueur2->pseudo);
+                           write_client(clients[i].sock, buffer_plateau);
+                           write_client(adv.sock, buffer_plateau);
+                           /*snprintf(buffer, BUF_SIZE, "Partie avec %s acceptée. La partie va commencer\n", client_demandeur.name);
+                           write_client(client_repondeur.sock, buffer);*/
+                        }else if(strcmp(buffer, "REFUSER") == 0){
+                           snprintf(buffer, BUF_SIZE, "Partie avec %s refusée.\n", adv.name);
+                           write_client(clients[i].sock, buffer);
+                           choisir_option(clients[i]);
+
+                           snprintf(buffer, BUF_SIZE, "Partie avec %s refusée.\n", clients[i].name);
+                           write_client(adv.sock, buffer);
+                           choisir_option(adv);
+                        }else{
+                           snprintf(buffer, BUF_SIZE, "Partie avec %s refusée.\n", clients[i].name);
+                           write_client(clients[i].sock, buffer);
+                        }
+
+                     
+
+                     default:
+                        printf("État inconnu pour le client (name: %d).\n", clients[i].name);
+                        break;
+
                   }
-                  else if (clients[i].etat == PARTIE_ATTENTE){
+
+
+
+                  /*else if (clients[i].etat == PARTIE_ATTENTE){
                      Partie* partie = parties_en_cours[clients[i].num_partie];
                      strncpy(buffer, "En attente coup adversaire !", BUF_SIZE - 1);
                      write_client(clients[i].sock, buffer);
@@ -309,9 +414,9 @@ static void app(void)
                      }
 
                      
-                  }
+                  }*/
                }
-               break;
+               //break;
             }
          }
       }
@@ -321,32 +426,12 @@ static void app(void)
    end_connection(sock);
 }
 
-int choix_partie(Client client_demandeur, Client client_repondeur, Client* clients, int actual, char* buffer){
+void choix_partie(Client client_demandeur, Client client_repondeur){
+   char buffer[BUF_SIZE];
    snprintf(buffer, BUF_SIZE, "Une partie est proposée avec %s. En attente d'acceptation\n", client_repondeur.name);
    write_client(client_demandeur.sock, buffer);
    snprintf(buffer, BUF_SIZE, "Une partie a été proposée par %s. ACCEPTER ou REFUSER ?\n", client_demandeur.name);
-   write_client(client_repondeur.sock, buffer);
-   read_client(client_repondeur.sock, buffer);
-   if(strcmp(buffer, "ACCEPTER") == 0){
-      client_demandeur.etat = PARTIE_TOUR;
-      client_repondeur.etat = PARTIE_ATTENTE;
-      snprintf(buffer, BUF_SIZE, "Partie avec %s acceptée. La partie va commencer...\n", client_repondeur.name);
-      write_client(client_demandeur.sock, buffer);
-      snprintf(buffer, BUF_SIZE, "Partie avec %s acceptée. La partie va commencer\n", client_demandeur.name);
-      write_client(client_repondeur.sock, buffer);
-      return 1;
-   }else if(strcmp(buffer, "REFUSER") == 0){
-      snprintf(buffer, BUF_SIZE, "Partie avec %s refusée.\n", client_repondeur.name);
-      write_client(client_demandeur.sock, buffer);
-      choisir_option(client_demandeur);
-
-      snprintf(buffer, BUF_SIZE, "Partie avec %s refusée.\n", client_demandeur.name);
-      write_client(client_repondeur.sock, buffer);
-      choisir_option(client_repondeur);
-      return 0;
-   }else{
-      choix_partie(client_demandeur, client_repondeur, clients, actual, buffer);
-   }
+   write_client(client_repondeur.sock, buffer); 
 }
 void list_clients(Client *clients, int actual, char *buffer) {
     int i;
@@ -370,9 +455,9 @@ void list_clients_dispos(Client c, Client *clients, int actual, char *buffer) {
 
 
 void choisir_option(Client c){
-      char buffer[BUF_SIZE];
-      strncpy(buffer,"\nBienvenue dans Awale !\nVeuillez choisir une option :\n1.Afficher tous les joueurs présents, tapez 'LISTE'\n2. Jouer à Awale, tapez PARTIE\n" , BUF_SIZE - 1);
-      write_client(c.sock, buffer);
+   char buffer[BUF_SIZE];
+   strncpy(buffer,"\nBienvenue dans Awale !\nVeuillez choisir une option :\n1.Afficher tous les joueurs présents, tapez 'LISTE'\n2. Jouer à Awale, tapez PARTIE\n" , BUF_SIZE - 1);
+   write_client(c.sock, buffer);
 }
 
 static void clear_clients(Client *clients, int actual)
