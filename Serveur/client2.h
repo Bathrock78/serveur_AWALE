@@ -8,7 +8,6 @@ typedef enum {
     MENU_TYPE_PARTIE,
     MENU_CHOIX_ADVERSAIRE,
     REPONDRE_DEMANDE_PARTIE,
-    ATT_REPONSE_PARTIE,
     PARTIE_TOUR,
     PARTIE_ATTENTE,
 } State;
@@ -19,6 +18,7 @@ typedef struct Client
    char name[BUF_SIZE];
    State etat;
    int num_partie;
+   struct Client* adversaire;
 }Client;
 
 
