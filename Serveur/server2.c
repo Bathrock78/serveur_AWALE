@@ -233,18 +233,19 @@ static void app(void)
                            sauvegarder_partie("Data/sauvegardes.csv",partie);
                            
                            if (!strcmp(partie->joueur_actuel->pseudo, clients[i].name)){
-                              strncpy(buffer, "C'est à toi de jouer !\n", BUF_SIZE - 1);
+                              strncpy(buffer, "C'est à toi de jouer !", BUF_SIZE - 1);
                               write_client(clients[i].sock, buffer);
-                              strncpy(buffer, "L'adversaire commence!\n", BUF_SIZE - 1);
+                              strncpy(buffer, "L'adversaire commence!", BUF_SIZE - 1);
                               write_client(clients[i].adversaire->sock, buffer);
                               clients[i].etat = PARTIE_TOUR;
                               clients[i].adversaire->etat = PARTIE_ATTENTE;
                            }
                            else{
-                              strncpy(buffer, "C'est à toi de jouer !\n", BUF_SIZE - 1);
+                              strncpy(buffer, "C'est à toi de jouer !", BUF_SIZE - 1);
                               write_client(clients[i].adversaire->sock, buffer);
-                              strncpy(buffer, "L'adversaire commence !\n", BUF_SIZE - 1);
+                              strncpy(buffer, "L'adversaire commence !", BUF_SIZE - 1);
                               write_client(clients[i].sock, buffer);
+                              
                               clients[i].adversaire->etat = PARTIE_TOUR;
                               clients[i].etat = PARTIE_ATTENTE;
                            }
@@ -262,9 +263,11 @@ static void app(void)
                            clients[i].adversaire->etat = MENU;
                            clients[i].etat = MENU;
                         }else{
-                           /*Gestion d'erreur
-                           */
+                           strncpy(buffer, "Choix invalide. ACCEPTER ou REFUSER ?", BUF_SIZE - 1);
+                           write_client(clients[i].sock, buffer);                           
                         }
+
+                        break;
 
                      case PARTIE_ATTENTE:
                         Partie* partie = parties_en_cours[clients[i].num_partie];
@@ -280,7 +283,9 @@ static void app(void)
                         if (choix < 1 || choix > 12) {
                            strncpy(buffer, "Choix invalide. Veuillez choisir une case entre 1 et 12.\n", BUF_SIZE - 1);
                            write_client(clients[i].sock, buffer);
-                           //break;
+                           afficher_plateau(buffer_plateau, BUF_SIZE, partie->plateau, partie->joueur1->score, partie->joueur1->pseudo, partie->joueur2->score, partie->joueur2->pseudo);
+                           write_client(clients[i].sock, buffer);
+                           break;
                            
                         }
 
@@ -288,34 +293,29 @@ static void app(void)
                         (partie->joueur_actuel == partie->joueur2 && (choix < 7 || choix > 12))) {
                            strncpy(buffer, "Choix invalide. Vous devez choisir une case de votre propre camp.\n", BUF_SIZE - 1);
                            write_client(clients[i].sock, buffer);
-                           //break;
+                           afficher_plateau(buffer_plateau, BUF_SIZE, partie->plateau, partie->joueur1->score, partie->joueur1->pseudo, partie->joueur2->score, partie->joueur2->pseudo);
+                           write_client(clients[i].sock, buffer_plateau);
+                           break;
                         }
 
                         if (!deplacement(choix - 1, partie->plateau, partie->joueur_actuel)) {
                            strncpy(buffer, "Déplacement non valide, choisissez une autre case.\n", BUF_SIZE - 1);
                            write_client(clients[i].sock, buffer);
-                           //break;
+                           afficher_plateau(buffer_plateau, BUF_SIZE, partie->plateau, partie->joueur1->score, partie->joueur1->pseudo, partie->joueur2->score, partie->joueur2->pseudo);
+                           write_client(clients[i].sock, buffer_plateau);
+                           break;
                         }
                         if(!finDePartie(partie)){
-                           clients[i].etat = PARTIE_ATTENTE;
-                           Client adv;
-                           if (partie->client_1 == i){
-                              adv = clients[partie->client_2];
-                           }
-                           else{
-                              adv = clients[partie->client_1];
-                           }
-                           adv.etat = PARTIE_TOUR;
-                           
-
-                           afficher_plateau(buffer_plateau, BUF_SIZE, partie->plateau, partie->joueur1->score, partie->joueur1->pseudo, partie->joueur2->score, partie->joueur2->score);
+                           afficher_plateau(buffer_plateau, BUF_SIZE, partie->plateau, partie->joueur1->score, partie->joueur1->pseudo, partie->joueur2->score, partie->joueur2->pseudo);
                            write_client(clients[i].sock, buffer_plateau);
-                           write_client(adv.sock, buffer_plateau);
+                           write_client(clients[i].adversaire->sock, buffer_plateau);
                            strncpy(buffer, "En attente coup adversaire !", BUF_SIZE - 1);
                            write_client(clients[i].sock, buffer);
                            strncpy(buffer, "A ton tour ! \n", BUF_SIZE - 1);
-                           write_client(adv.sock, buffer);
+                           write_client(clients[i].adversaire->sock, buffer);
                            partie->joueur_actuel = (partie->joueur_actuel == partie->joueur1) ? partie->joueur2 : partie->joueur1;
+                           clients[i].etat = PARTIE_ATTENTE;
+                           clients[i].adversaire->etat = PARTIE_TOUR;
                         }else{
                            Joueur *gagnant = vainqueur(partie);
                            if (gagnant != NULL) {
@@ -329,9 +329,11 @@ static void app(void)
                            end_partie(&partie); 
                            //memmov(partie)
                            clients[i].num_partie = -1;
-                           clients[i].etat = MENU;
-                           //maybe mettre l'état de l'adversaire à menu aussi
+                           clients[i].adversaire->num_partie = 1;
+                           choisir_option(*(clients[i].adversaire));
                            choisir_option(clients[i]);
+                           clients[i].etat = MENU;
+                           clients[i].adversaire->etat = MENU;
                            
                         }
                         break;
@@ -344,81 +346,6 @@ static void app(void)
                         break;
 
                   }
-
-
-
-                  /*else if (clients[i].etat == PARTIE_ATTENTE){
-                     Partie* partie = parties_en_cours[clients[i].num_partie];
-                     strncpy(buffer, "En attente coup adversaire !", BUF_SIZE - 1);
-                     write_client(clients[i].sock, buffer);
-
-                  }
-                  else if (clients[i].etat == PARTIE_TOUR){
-                     read_client(clients[i].sock,buffer);
-                     int choix = atoi(buffer);
-                     Partie* partie = parties_en_cours[clients[i].num_partie];
-                     //Choix de la case à jouer
-                     
-                     if (choix < 1 || choix > 12) {
-                        strncpy(buffer, "Choix invalide. Veuillez choisir une case entre 1 et 12.\n", BUF_SIZE - 1);
-                        write_client(clients[i].sock, buffer);
-                        break;
-                        
-                     }
-
-                     if ((partie->joueur_actuel == partie->joueur1 && (choix < 1 || choix > 6)) ||
-                     (partie->joueur_actuel == partie->joueur2 && (choix < 7 || choix > 12))) {
-                        strncpy(buffer, "Choix invalide. Vous devez choisir une case de votre propre camp.\n", BUF_SIZE - 1);
-                        write_client(clients[i].sock, buffer);
-                        break;
-                     }
-
-                     if (!deplacement(choix - 1, partie->plateau, partie->joueur_actuel)) {
-                        strncpy(buffer, "Déplacement non valide, choisissez une autre case.\n", BUF_SIZE - 1);
-                        write_client(clients[i].sock, buffer);
-                        break;
-                     }
-                     if(!finDePartie(partie)){
-                        clients[i].etat = PARTIE_ATTENTE;
-                        Client adv;
-                        if (partie->client_1 == i){
-                           adv = clients[partie->client_2];
-                        }
-                        else{
-                           adv = clients[partie->client_1];
-                        
-                        }
-                        adv.etat = PARTIE_TOUR;
-                        
-
-                        afficher_plateau(buffer_plateau, BUF_SIZE, partie->plateau, partie->joueur1->score, partie->joueur1->pseudo, partie->joueur2->score, partie->joueur2->score);
-                        write_client(clients[i].sock, buffer_plateau);
-                        write_client(adv.sock, buffer_plateau);
-                        strncpy(buffer, "En attente coup adversaire !", BUF_SIZE - 1);
-                        write_client(clients[i].sock, buffer);
-                        strncpy(buffer, "A ton tour ! \n", BUF_SIZE - 1);
-                        write_client(adv.sock, buffer);
-                        partie->joueur_actuel = (partie->joueur_actuel == partie->joueur1) ? partie->joueur2 : partie->joueur1;
-                     }else{
-                        Joueur *gagnant = vainqueur(partie);
-                        if (gagnant != NULL) {
-                           snprintf(buffer, BUF_SIZE, "Le gagnant est %s avec %d points!\n", gagnant->pseudo,gagnant->score); 
-                           write_client(clients[i].sock, buffer);
-                        }
-                        else{
-                           strncpy(buffer, "IKIWAKE\n", BUF_SIZE - 1);
-                           write_client(clients[i].sock, buffer);
-                        }   
-                        end_partie(&partie); 
-                        //memmov(partie)
-                        clients[i].num_partie = -1;
-                        clients[i].etat = MENU;
-                        choisir_option(clients[i]);
-                        
-                     }
-
-                     
-                  }*/
                }
                //break;
             }
