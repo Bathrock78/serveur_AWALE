@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <stdbool.h>
-
+#include <unistd.h>
 #include <string.h>
 
 #include "server2.h"
@@ -40,10 +40,9 @@ static void app(void)
    int actual_partie = 0;
    /* an array for all clients */
    Client clients[MAX_CLIENTS];
-   Partie* parties_en_cours[20];
-   int parties_dispos[20];
-   for (int i; i<20; i++){
-      parties_dispos[i] = 0;
+   Partie** parties_en_cours = malloc(20 * sizeof(Partie*));
+   if (access("Data/sauvegardes.csv", F_OK) == 0){
+      charger_parties_csv("Data/sauvegardes.csv", parties_en_cours);
    }
 
    fd_set rdfs;
@@ -147,11 +146,17 @@ static void app(void)
                if (c > 0) {
                   switch(clients[i].etat){
                      case MENU:
-                        if (strcmp(buffer, "LISTE") == 0) {
+                        if (strcmp(buffer, "LISTEC") == 0) {
                            char client_list[BUF_SIZE];
                            list_clients(clients, actual, client_list);
                            strncat(client_list,"\n", BUF_SIZE - strlen(client_list) - 1);
                            write_client(client.sock, client_list);
+                           choisir_option(clients[i]);
+                        }else if (strcmp(buffer, "LISTEP") == 0) {
+                           char partie_list[BUF_SIZE];
+                           list_parties(parties_en_cours, actual, partie_list);
+                           strncat(partie_list,"\n", BUF_SIZE - strlen(partie_list) - 1);
+                           write_client(client.sock, partie_list);
                            choisir_option(clients[i]);
                         }else if (strcmp(buffer, "PARTIE") == 0) {
                            strncpy(buffer, "ALEATOIRE ou CHOISIR adversaire ?", BUF_SIZE - 1);
@@ -171,8 +176,6 @@ static void app(void)
                                  found = 1;
                                  clients[i].adversaire = &clients[j];
                                  clients[i].adversaire->adversaire = &clients[i];
-                                 /*partie->client_1 = i;
-                                 partie->client_2 = j;*/
                                  choix_partie(clients[i],clients[j]);
                                  clients[i].adversaire->etat = REPONDRE_DEMANDE_PARTIE; 
                                 break; 
@@ -230,7 +233,6 @@ static void app(void)
                            clients[i].num_partie = actual_partie;
                            clients[i].adversaire->num_partie = actual_partie;
                            actual_partie++;
-                           sauvegarder_partie("Data/sauvegardes.csv",partie);
                            
                            if (!strcmp(partie->joueur_actuel->pseudo, clients[i].name)){
                               strncpy(buffer, "C'est à toi de jouer !", BUF_SIZE - 1);
@@ -316,6 +318,7 @@ static void app(void)
                            partie->joueur_actuel = (partie->joueur_actuel == partie->joueur1) ? partie->joueur2 : partie->joueur1;
                            clients[i].etat = PARTIE_ATTENTE;
                            clients[i].adversaire->etat = PARTIE_TOUR;
+                           sauvegarder_partie("Data/sauvegardes.csv",partie, actual_partie-1);
                         }else{
                            Joueur *gagnant = vainqueur(partie);
                            if (gagnant != NULL) {
@@ -327,7 +330,7 @@ static void app(void)
                               write_client(clients[i].sock, buffer);
                            }   
                            end_partie(&partie); 
-                           //memmov(partie)
+                           parties_en_cours[clients[i].num_partie] = NULL;
                            clients[i].num_partie = -1;
                            clients[i].adversaire->num_partie = 1;
                            choisir_option(*(clients[i].adversaire));
@@ -373,6 +376,28 @@ void list_clients(Client *clients, int actual, char *buffer) {
     }
 }
 
+void list_parties(Partie **parties_en_cours, int actual, char *buffer) {
+    int i;
+    strncpy(buffer, "Parties en cours :\n", BUF_SIZE - 1);
+
+    for (i = 0; i < 20; i++) {
+        if (parties_en_cours[i] != NULL) {
+            char ligne[256];
+            snprintf(ligne, sizeof(ligne), 
+                     "Partie : %s vs %s | Score : %d - %d \n",
+                     parties_en_cours[i]->joueur1->pseudo,
+                     parties_en_cours[i]->joueur2->pseudo,
+                     parties_en_cours[i]->joueur1->score,
+                     parties_en_cours[i]->joueur2->score);
+            strncat(buffer, ligne, BUF_SIZE - strlen(buffer) - 1);
+        }
+    }
+    if (strlen(buffer) == strlen("Parties en cours :\n")) {
+        strncat(buffer, "Aucune partie en cours.\n", BUF_SIZE - strlen(buffer) - 1);
+    }
+}
+
+
 void list_clients_dispos(Client c, Client *clients, int actual, char *buffer) {
     int i;
     strcpy(buffer, "Choisissez votre adversaire :\n");
@@ -387,7 +412,7 @@ void list_clients_dispos(Client c, Client *clients, int actual, char *buffer) {
 
 void choisir_option(Client c){
    char buffer[BUF_SIZE];
-   strncpy(buffer,"\nBienvenue dans Awale !\nVeuillez choisir une option :\n1.Afficher tous les joueurs présents, tapez 'LISTE'\n2. Jouer à Awale, tapez PARTIE\n" , BUF_SIZE - 1);
+   strncpy(buffer,"\nBienvenue dans Awale !\nVeuillez choisir une option :\n1.Afficher tous les joueurs présents, tapez 'LISTEC'\n2. Jouer à Awale, tapez PARTIE\n3.Afficher les parties en cours, tapez 'LISTEP'\n" , BUF_SIZE - 1);
    write_client(c.sock, buffer);
 }
 

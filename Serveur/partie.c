@@ -207,32 +207,133 @@ void end_partie(Partie* partie){
     free(partie);
 }
 
-void sauvegarder_partie(const char *nomFichier, Partie *partie) {
-    FILE *fichier;
-    int fichierExiste = (access(nomFichier, F_OK) == 0); // Vérifie si le fichier existe déjà
 
-    // Ouvre en mode ajout (a), crée le fichier s'il n'existe pas
-    fichier = fopen(nomFichier, "a");
+void sauvegarder_partie(const char *nomFichier, Partie *partie, int emplacement) {
+    FILE *fichier;
+    char lignes[20][1024]; // pour stocker les lignes que l'on ne modifie pas
+    int fichierExiste = (access(nomFichier, F_OK) == 0);
+
+    // Vérification de l'emplacement valide
+    if (emplacement < 0 || emplacement >= 20) {
+        fprintf(stderr, "Erreur : emplacement invalide. Doit être entre 0 et 19.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    // Ouvrir le fichier en lecture/écriture
+    fichier = fopen(nomFichier, fichierExiste ? "r+" : "w+");
     if (fichier == NULL) {
         perror("Erreur lors de l'ouverture du fichier");
         exit(EXIT_FAILURE);
     }
 
-    // Si le fichier n'existe pas, écrire les en-têtes
+    // Si le fichier n'existe pas, initialiser avec une ligne d'en-têtes
     if (!fichierExiste) {
-        fprintf(fichier, "PartieID,Case1,Case2,Case3,Case4,Case5,Case6,Case7,Case8,Case9,Case10,Case11,Case12,ScoreJoueur1,ScoreJoueur2,Joueur1,Joueur2,JoueurTour\n");
+        fprintf(fichier, "PartieID,Plateau1,Plateau2,Plateau3,Plateau4,Plateau5,Plateau6,Plateau7,Plateau8,Plateau9,Plateau10,Plateau11,Plateau12,ScoreJoueur1,ScoreJoueur2,Joueur1,Joueur2,JoueurTour\n");
+        // Initialiser 20 lignes vides pour les parties
+        for (int i = 0; i < 20; i++) {
+            fprintf(fichier, "%d,,,,,,,,,,,,,,,,,\n", i + 1);
+        }
+        fflush(fichier); // Assure l'écriture dans le fichier
     }
-    // Écrire les données
-    for (int i = 0; i < 12; i++) {
-        fprintf(fichier, "%d,", partie->plateau->plateau[i]);
+
+    // Lire les 20 lignes existantes dans le fichier
+    rewind(fichier); // Retour au début du fichier
+    fgets(lignes[0], sizeof(lignes[0]), fichier); // Ignorer l'en-tête
+    for (int i = 0; i < 20; i++) {
+        if (fgets(lignes[i], sizeof(lignes[i]), fichier) == NULL) {
+            strcpy(lignes[i], "\n"); // Remplir avec une ligne vide si manquante
+        }
     }
-    fprintf(fichier, "%d,%d,%s,%s,%s\n",
-            partie->joueur1->score,
-            partie->joueur2->score,
-            partie->joueur1->pseudo,
-            partie->joueur2->pseudo,
-            partie->joueur_actuel->pseudo);
+
+    // Créer la nouvelle ligne correspondant à la partie
+    char nouvelleLigne[1024];
+    snprintf(nouvelleLigne, sizeof(nouvelleLigne), 
+             "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%s,%s\n",
+             emplacement + 1, // PartieID
+             partie->plateau->plateau[0], partie->plateau->plateau[1], partie->plateau->plateau[2],
+             partie->plateau->plateau[3], partie->plateau->plateau[4], partie->plateau->plateau[5],
+             partie->plateau->plateau[6], partie->plateau->plateau[7], partie->plateau->plateau[8],
+             partie->plateau->plateau[9], partie->plateau->plateau[10], partie->plateau->plateau[11],
+             partie->joueur1->score, partie->joueur2->score,
+             partie->joueur1->pseudo, partie->joueur2->pseudo, partie->joueur_actuel->pseudo);
+
+    // Remplacer la ligne correspondante
+    strncpy(lignes[emplacement], nouvelleLigne, sizeof(lignes[emplacement]) - 1);
+
+    // Réécrire tout le fichier
+    rewind(fichier);
+    fprintf(fichier, "PartieID,Plateau1,Plateau2,Plateau3,Plateau4,Plateau5,Plateau6,Plateau7,Plateau8,Plateau9,Plateau10,Plateau11,Plateau12,ScoreJoueur1,ScoreJoueur2,Joueur1,Joueur2,JoueurTour\n");
+    for (int i = 0; i < 20; i++) {
+        fputs(lignes[i], fichier);
+    }
 
     fclose(fichier);
-    printf("Partie entre %s et %s sauvegardée dans %s\n",partie->joueur1->pseudo,partie->joueur2->pseudo, nomFichier);
+    printf("Partie entre %s et %s sauvegardée dans %s (emplacement %d)\n",
+           partie->joueur1->pseudo,
+           partie->joueur2->pseudo,
+           nomFichier,
+           emplacement);
 }
+
+
+void charger_parties_csv(const char *nomFichier, Partie *parties[]) {
+    FILE *fichier = fopen(nomFichier, "r");
+    if (fichier == NULL) {
+        perror("Erreur lors de l'ouverture du fichier");
+        exit(EXIT_FAILURE);
+    }
+
+    char ligne[1024];
+    int ligneCourante = 0;
+    int id;
+
+    // Ignorer la première ligne d'en-tête
+    if (fgets(ligne, sizeof(ligne), fichier) == NULL) {
+        perror("Erreur lors de la lecture de l'en-tête");
+        fclose(fichier);
+        exit(EXIT_FAILURE);
+    }
+
+    while (fgets(ligne, sizeof(ligne), fichier) != NULL) {
+        
+
+        Partie *partie = malloc(sizeof(Partie));
+        Plateau *plateau = malloc(sizeof(Plateau));
+        Joueur *joueur1 = malloc(sizeof(Joueur));
+        Joueur *joueur2 = malloc(sizeof(Joueur));
+        Joueur *joueur_actuel = malloc(sizeof(Joueur));
+        partie->plateau = plateau;
+        partie->joueur1 = joueur1;
+        partie->joueur2 = joueur2;
+        int result = sscanf(ligne,
+               "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%[^,],%[^,],%[^\n]",
+               &id, &plateau->plateau[0], &plateau->plateau[1], &plateau->plateau[2],
+               &plateau->plateau[3], &plateau->plateau[4], &plateau->plateau[5],
+               &plateau->plateau[6], &plateau->plateau[7], &plateau->plateau[8],
+               &plateau->plateau[9], &plateau->plateau[10], &plateau->plateau[11],
+               &joueur1->score, &joueur2->score,
+               joueur1->pseudo, joueur2->pseudo, joueur_actuel->pseudo);
+
+        // Vérifier que les pseudos des joueurs sont valides
+        if (result < 17 || strlen(joueur1->pseudo) == 0 || strlen(joueur2->pseudo) == 0) {
+            // Si l'un des joueurs n'a pas de pseudo ou si la ligne est mal formatée, on ignore cette partie
+            free(partie->plateau);
+            free(partie->joueur1);
+            free(partie->joueur2);
+            free(partie->joueur_actuel);
+            free(partie);
+            continue; 
+        }
+
+        
+        partie->joueur_actuel = strcmp(joueur1->pseudo, joueur_actuel->pseudo) == 0 ? joueur1 : joueur2;
+
+        parties[ligneCourante] = partie;
+        ligneCourante++;
+    }
+
+    fclose(fichier);
+    printf("Parties chargées depuis sauvegarde.");
+}
+
+
