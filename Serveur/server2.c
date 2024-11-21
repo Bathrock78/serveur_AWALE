@@ -111,8 +111,38 @@ static void app(void)
             }
          }
          if (verif == 0){
-            choisir_option(c);
-            c.etat = MENU;
+            // on veut verifier que le client n'est pas déjà dans une partie
+            int verif_partie = 0;
+            for (int i = 0; i < 20; i++){
+               if (parties_en_cours[i] != NULL){
+                  if (!strcmp(parties_en_cours[i]->joueur1->pseudo, c.name) || !strcmp(parties_en_cours[i]->joueur2->pseudo, c.name)){
+                     strncpy(buffer, "Vous êtes déjà dans une partie en cours !\n", BUF_SIZE - 1);
+                     write_client(c.sock, buffer);
+                     // on regarde si c'est son tour ou pas
+                     if (!strcmp(parties_en_cours[i]->joueur_actuel->pseudo, c.name)){
+                        strncpy(buffer, "C'est à vous de jouer !\n", BUF_SIZE - 1);
+                        afficher_plateau(buffer_plateau, BUF_SIZE, parties_en_cours[i]->plateau, parties_en_cours[i]->joueur1->score, 
+                        parties_en_cours[i]->joueur1->pseudo, parties_en_cours[i]->joueur2->score, parties_en_cours[i]->joueur2->pseudo);
+                        write_client(c.sock, buffer_plateau);
+                        c.etat = PARTIE_TOUR;
+                     }
+                     else{
+                        strncpy(buffer, "C'est à votre adversaire de jouer !\n", BUF_SIZE - 1);
+                        c.etat = PARTIE_ATTENTE;
+                     }
+                     write_client(c.sock, buffer);
+                     verif_partie = 1;
+                     break;
+                  }
+               }
+            }
+            if(verif_partie){
+               
+            }
+            else{
+               choisir_option(c);
+               c.etat = MENU;
+            }
             clients[actual] = c;
             actual++;
          }
@@ -140,7 +170,7 @@ static void app(void)
                   remove_client(clients, i, &actual);
                   strncpy(buffer, client.name, BUF_SIZE - 1);
                   strncat(buffer, " disconnected !", BUF_SIZE - strlen(buffer) - 1);
-                  send_message_to_all_clients(clients, client, actual, buffer, 1);
+                  //send_message_to_all_clients(clients, client, actual, buffer, 1);
                }
                
                if (c > 0) {
@@ -229,9 +259,16 @@ static void app(void)
                            snprintf(buffer, BUF_SIZE, "Partie avec %s acceptée. La partie va commencer\n", clients[i].name);
                            write_client(clients[i].adversaire->sock, buffer);
                            Partie* partie = init_partie(clients[i].adversaire->name,clients[i].name);
-                           parties_en_cours[actual_partie] = partie;
-                           clients[i].num_partie = actual_partie;
-                           clients[i].adversaire->num_partie = actual_partie;
+
+                           //on parcourt les parties en cours pour trouver une place libre
+                           for (int j = 0; j < 20; j++){
+                              if (parties_en_cours[j] == NULL){
+                                 parties_en_cours[j] = partie;
+                                 clients[i].num_partie = j;
+                                 clients[i].adversaire->num_partie = j;
+                                 break;
+                              }
+                           }
                            actual_partie++;
                            
                            if (!strcmp(partie->joueur_actuel->pseudo, clients[i].name)){
