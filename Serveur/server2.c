@@ -116,6 +116,12 @@ static void app(void)
             for (int i = 0; i < 20; i++){
                if (parties_en_cours[i] != NULL){
                   if (!strcmp(parties_en_cours[i]->joueur1->pseudo, c.name) || !strcmp(parties_en_cours[i]->joueur2->pseudo, c.name)){
+                     if(!strcmp(parties_en_cours[i]->joueur1->pseudo, c.name)){
+                        c.adversaire = &clients[parties_en_cours[i]->client_2];
+                     }else{
+                        c.adversaire = &clients[parties_en_cours[i]->client_1];
+                     }
+                     
                      strncpy(buffer, "Vous êtes déjà dans une partie en cours !\n", BUF_SIZE - 1);
                      write_client(c.sock, buffer);
                      // on regarde si c'est son tour ou pas
@@ -136,13 +142,11 @@ static void app(void)
                   }
                }
             }
-            if(verif_partie){
-               
-            }
-            else{
+            if(!verif_partie){
                choisir_option(c);
                c.etat = MENU;
             }
+
             clients[actual] = c;
             actual++;
          }
@@ -352,10 +356,12 @@ static void app(void)
                            write_client(clients[i].sock, buffer);
                            strncpy(buffer, "A ton tour ! \n", BUF_SIZE - 1);
                            write_client(clients[i].adversaire->sock, buffer);
+                           snprintf(buffer, BUF_SIZE, "Adversaire: %s \n", clients[i].adversaire->name);
+                           write_client(clients[i].sock, buffer);
                            partie->joueur_actuel = (partie->joueur_actuel == partie->joueur1) ? partie->joueur2 : partie->joueur1;
                            clients[i].etat = PARTIE_ATTENTE;
                            clients[i].adversaire->etat = PARTIE_TOUR;
-                           sauvegarder_partie("Data/sauvegardes.csv",partie, actual_partie-1);
+                           sauvegarder_partie("Data/sauvegardes.csv",partie, actual_partie);
                         }else{
                            Joueur *gagnant = vainqueur(partie);
                            if (gagnant != NULL) {
@@ -366,10 +372,11 @@ static void app(void)
                               strncpy(buffer, "IKIWAKE\n", BUF_SIZE - 1);
                               write_client(clients[i].sock, buffer);
                            }   
-                           end_partie(&partie); 
+                           end_partie(&partie);
                            parties_en_cours[clients[i].num_partie] = NULL;
+                           actual_partie --;
                            clients[i].num_partie = -1;
-                           clients[i].adversaire->num_partie = 1;
+                           clients[i].adversaire->num_partie = -1;
                            choisir_option(*(clients[i].adversaire));
                            choisir_option(clients[i]);
                            clients[i].etat = MENU;

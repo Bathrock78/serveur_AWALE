@@ -70,35 +70,44 @@ bool adversaireVide(Partie *partie) {
         return false;
     }
 }
-bool famine(Partie *partie){
-    /*int i = (partie->joueur1 == partie->joueur_actuel) ? 5 : 11;
-    int fin = i + 1;
-    while((partie->plateau->plateau[i] + i) < fin){
-        i--;
-    }
-    if( i == fin){
-        printf("Famine\n");
-        return true;
-    }else{
-        return false;
-    }*/
-    int debut = (partie->joueur1 == partie->joueur_actuel) ? 0 : 6;
-    int fin = debut + 6;
+bool famine(Partie *partie) {
+    
+    int debut_adversaire = (partie->joueur1 == partie->joueur_actuel) ? 0 : 6;
+    int fin_adversaire = debut_adversaire + 6;
+    int debut_joueur = (debut_adversaire == 0) ? 6 : 0;
+    int fin_joueur = debut_joueur + 6;
 
-    for (int i = debut; i < fin; i++) {
+    
+    bool camp_vide = true;
+    for (int i = debut_joueur; i < fin_joueur; i++) {
+        if (partie->plateau->plateau[i] > 0) {
+            camp_vide = false;
+            break;
+        }
+    }
+
+    if (!camp_vide) {
+        return false;
+    }
+
+    // Vérifier si l'adversaire peut nourrir le joueur en famine
+    for (int i = debut_adversaire; i < fin_adversaire; i++) {
         int graines = partie->plateau->plateau[i];
         if (graines > 0) {
-            int positionFinale = (i + graines) % 12; // Position finale après le semis
-            if ((partie->joueur1 == partie->joueur_actuel && positionFinale >= 6) ||
-                (partie->joueur1 != partie->joueur_actuel && positionFinale < 6)) {
-                // Si la dernière graine tombe dans le camp adverse
-                return false;
+            int positionFinale = (i + graines) % 12;
+
+            // Vérifie si la graine finit dans le camp du joueur en famine
+            if (positionFinale >= debut_joueur && positionFinale < fin_joueur) {
+                return false; 
             }
         }
     }
-    printf("Famine\n");
+
+  
+    printf("Famine détectée\n");
     return true;
 }
+
 
 bool finDePartie(Partie *partie) {
 
@@ -201,9 +210,9 @@ Partie* init_partie(const char* pseudo1, const char * pseudo2){
 }*/
 
 void end_partie(Partie* partie){
-    free(partie->plateau);
-    free(partie->joueur1);
-    free(partie->joueur2);
+    free(&(partie->plateau));
+    free(&(partie->joueur1));
+    free(&(partie->joueur2));
     free(partie);
 }
 
@@ -333,7 +342,7 @@ void charger_parties_csv(const char *nomFichier, Partie *parties[]) {
     }
 
     fclose(fichier);
-    printf("Parties chargées depuis sauvegarde.");
+    printf("Parties chargées depuis sauvegarde.\n");
 }
 
 
