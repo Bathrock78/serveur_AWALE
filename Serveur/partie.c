@@ -5,6 +5,7 @@
 #include "partie.h"
 #include "joueur.h"
 #include <unistd.h>
+#include <time.h>
 
 Joueur* tirage_au_sort(Partie *partie) {
     int joueur_num = rand() % 2;

@@ -12,6 +12,7 @@ typedef struct Partie {
     int tour_sans_prise_consecutif;
     int client_1;
     int client_2;
+    time_t debut_tour;
 }Partie ;
 
 Joueur* tirage_au_sort(Partie *partie);

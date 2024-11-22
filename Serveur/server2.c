@@ -3,11 +3,14 @@
 #include <errno.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <time.h>
 #include <string.h>
 
 #include "server2.h"
 #include "client2.h"
 #include "partie.h"
+
+#define TIME_LIMIT 20
 
 static void init(void)
 {
@@ -49,6 +52,40 @@ static void app(void)
 
    while(1)
    {
+      for (int i = 0; i < 20; i++){
+         if (parties_en_cours[i] != NULL){
+            if (parties_en_cours[i]->joueur_actuel != NULL) {
+               time_t now = time(NULL);
+               if (difftime(now, parties_en_cours[i]->debut_tour) >= TIME_LIMIT-10 && difftime(now, parties_en_cours[i]->debut_tour) < TIME_LIMIT) {
+                  for (int j = 0; j < actual; j++){
+                     if (clients[j].num_partie == i && clients[j].etat == PARTIE_TOUR){
+                        snprintf(buffer, BUF_SIZE, "Attention ! il vous reste 10 secondes pour jouer.\n");
+                        write_client(clients[j].sock, buffer);
+                     }
+                  }
+               }
+               else if (difftime(now, parties_en_cours[i]->debut_tour) >= TIME_LIMIT) {
+                  snprintf(buffer, BUF_SIZE, "Temps écoulé ! Vous perdez la partie.\n");
+                  end_partie(&parties_en_cours[i]);
+                  parties_en_cours[i] = NULL;
+                  actual_partie --;
+                  for (int j = 0; j < actual; j++){
+                     if (clients[j].num_partie == i && clients[j].etat == PARTIE_TOUR){
+                        clients[j].num_partie = -1;
+                        clients[j].adversaire->num_partie = -1;
+                        choisir_option(clients[j]);
+                        choisir_option(*(clients[j].adversaire));
+                        clients[j].etat = MENU;
+                        clients[j].adversaire->etat = MENU;
+                        write_client(clients[j].sock, buffer);
+                        strncpy(buffer, "Votre adversaire s'est déconnecté. Vous remportez la partie !\n", BUF_SIZE - 1);
+                        write_client(clients[j].sock, buffer);
+                     }
+                  }
+               }
+            }
+         }
+      }
       int i = 0;
       FD_ZERO(&rdfs);
 
@@ -110,6 +147,10 @@ static void app(void)
                verif = 1;
             }
          }
+
+         
+         
+
          if (verif == 0){
             // on veut verifier que le client n'est pas déjà dans une partie
             int verif_partie = 0;
@@ -295,6 +336,7 @@ static void app(void)
                            afficher_plateau(buffer_plateau, BUF_SIZE, partie->plateau, partie->joueur1->score, partie->joueur1->pseudo, partie->joueur2->score, partie->joueur2->pseudo);
                            write_client(clients[i].sock, buffer_plateau);
                            write_client(clients[i].adversaire->sock, buffer_plateau);
+                           partie->debut_tour = time(NULL);
                         }else if(strcmp(buffer, "REFUSER") == 0){
                            snprintf(buffer, BUF_SIZE, "Partie avec %s refusée.\n", clients[i].adversaire->name);
                            write_client(clients[i].sock, buffer);
@@ -352,7 +394,7 @@ static void app(void)
                            afficher_plateau(buffer_plateau, BUF_SIZE, partie->plateau, partie->joueur1->score, partie->joueur1->pseudo, partie->joueur2->score, partie->joueur2->pseudo);
                            write_client(clients[i].sock, buffer_plateau);
                            write_client(clients[i].adversaire->sock, buffer_plateau);
-                           strncpy(buffer, "En attente coup adversaire !", BUF_SIZE - 1);
+                           strncpy(buffer, "En attente coup adversaire !\n", BUF_SIZE - 1);
                            write_client(clients[i].sock, buffer);
                            strncpy(buffer, "A ton tour ! \n", BUF_SIZE - 1);
                            write_client(clients[i].adversaire->sock, buffer);
