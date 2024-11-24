@@ -52,40 +52,8 @@ static void app(void)
 
    while(1)
    {
-      for (int i = 0; i < 20; i++){
-         if (parties_en_cours[i] != NULL){
-            if (parties_en_cours[i]->joueur_actuel != NULL) {
-               time_t now = time(NULL);
-               if (difftime(now, parties_en_cours[i]->debut_tour) >= TIME_LIMIT-10 && difftime(now, parties_en_cours[i]->debut_tour) < TIME_LIMIT) {
-                  for (int j = 0; j < actual; j++){
-                     if (clients[j].num_partie == i && clients[j].etat == PARTIE_TOUR){
-                        snprintf(buffer, BUF_SIZE, "Attention ! il vous reste 10 secondes pour jouer.\n");
-                        write_client(clients[j].sock, buffer);
-                     }
-                  }
-               }
-               else if (difftime(now, parties_en_cours[i]->debut_tour) >= TIME_LIMIT) {
-                  snprintf(buffer, BUF_SIZE, "Temps écoulé ! Vous perdez la partie.\n");
-                  end_partie(&parties_en_cours[i]);
-                  parties_en_cours[i] = NULL;
-                  actual_partie --;
-                  for (int j = 0; j < actual; j++){
-                     if (clients[j].num_partie == i && clients[j].etat == PARTIE_TOUR){
-                        clients[j].num_partie = -1;
-                        clients[j].adversaire->num_partie = -1;
-                        choisir_option(clients[j]);
-                        choisir_option(*(clients[j].adversaire));
-                        clients[j].etat = MENU;
-                        clients[j].adversaire->etat = MENU;
-                        write_client(clients[j].sock, buffer);
-                        strncpy(buffer, "Votre adversaire s'est déconnecté. Vous remportez la partie !\n", BUF_SIZE - 1);
-                        write_client(clients[j].sock, buffer);
-                     }
-                  }
-               }
-            }
-         }
-      }
+      
+
       int i = 0;
       FD_ZERO(&rdfs);
 
@@ -200,12 +168,49 @@ static void app(void)
       }
       else
       {
+         
          int i = 0;
          for(i = 0; i < actual; i++)
          {
             /* a client is talking */
             if(FD_ISSET(clients[i].sock, &rdfs))
             {
+               for (int i = 0; i < 20; i++){
+                  if (parties_en_cours[i] != NULL){
+                     if (parties_en_cours[i]->joueur_actuel != NULL) {
+                        time_t now = time(NULL);
+                        double elapsed = difftime(now, parties_en_cours[i]->debut_tour);
+                        printf("Partie[%d]: elapsed = %.f seconds\n", i, elapsed);
+                        if (difftime(now, parties_en_cours[i]->debut_tour) >= TIME_LIMIT-10 && difftime(now, parties_en_cours[i]->debut_tour) < TIME_LIMIT) {
+                           for (int j = 0; j < actual; j++){
+                              if (clients[j].num_partie == i && clients[j].etat == PARTIE_TOUR){
+                                 snprintf(buffer, BUF_SIZE, "Attention ! il vous reste 10 secondes pour jouer.\n");
+                                 write_client(clients[j].sock, buffer);
+                              }
+                           }
+                        }
+                        else if (difftime(now, parties_en_cours[i]->debut_tour) >= TIME_LIMIT) {
+                           snprintf(buffer, BUF_SIZE, "Temps écoulé ! Vous perdez la partie.\n");
+                           end_partie(&parties_en_cours[i]);
+                           parties_en_cours[i] = NULL;
+                           actual_partie --;
+                           for (int j = 0; j < actual; j++){
+                              if (clients[j].num_partie == i && clients[j].etat == PARTIE_TOUR){
+                                 clients[j].num_partie = -1;
+                                 clients[j].adversaire->num_partie = -1;
+                                 clients[j].etat = MENU;
+                                 clients[j].adversaire->etat = MENU;
+                                 write_client(clients[j].sock, buffer);
+                                 choisir_option(clients[j]);
+                                 strncpy(buffer, "Votre adversaire s'est déconnecté. Vous remportez la partie !\n", BUF_SIZE - 1);
+                                 write_client(clients[j].adversaire->sock, buffer);
+                                 choisir_option(*(clients[j].adversaire));
+                              }
+                           }
+                        }
+                     }
+                  }
+               }
                Client client = clients[i];
                int c = read_client(clients[i].sock, buffer);
                /* client disconnected */

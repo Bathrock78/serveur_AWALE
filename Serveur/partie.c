@@ -210,11 +210,14 @@ Partie* init_partie(const char* pseudo1, const char * pseudo2){
 
 }*/
 
-void end_partie(Partie* partie){
-    free(&(partie->plateau));
-    free(&(partie->joueur1));
-    free(&(partie->joueur2));
-    free(partie);
+void end_partie(Partie** partie){
+    if (*partie != NULL) {
+        free((*partie)->plateau);
+        free((*partie)->joueur1);
+        free((*partie)->joueur2);
+        free(*partie);
+        *partie = NULL;
+    }
 }
 
 
