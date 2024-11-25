@@ -1,7 +1,8 @@
+#include "server2.h"
 #ifndef CLIENT_H
 #define CLIENT_H
 
-#include "server2.h"
+
 
 typedef enum {
     MENU,

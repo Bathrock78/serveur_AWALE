@@ -10,7 +10,7 @@
 #include "client2.h"
 #include "partie.h"
 
-#define TIME_LIMIT 60
+#define TIME_LIMIT 60 //temps maximal pour jouer un coup
 #define MAX_PARTIES 20
 
 static void init(void)
@@ -71,11 +71,6 @@ static void app(void)
          FD_SET(clients[i].sock, &rdfs);
       }
 
-      /*if(select(max + 1, &rdfs, NULL, NULL, NULL) == -1)
-      {
-         perror("select()");
-         exit(errno);
-      }*/
       // Appeler select() avec un timeout pour éviter un blocage long
          struct timeval timeout = {0, 500000}; // 0.5 seconde
          if (select(max + 1, &rdfs, NULL, NULL, &timeout) < 0) {
@@ -197,7 +192,6 @@ static void app(void)
                   remove_client(clients, i, &actual);
                   strncpy(buffer, client.name, BUF_SIZE - 1);
                   strncat(buffer, " disconnected !", BUF_SIZE - strlen(buffer) - 1);
-                  //send_message_to_all_clients(clients, client, actual, buffer, 1);
                }
                
                if (c > 0) {
@@ -423,7 +417,6 @@ static void app(void)
 
                   }
                }
-               //break;
             }
          }
       }

@@ -10,7 +10,7 @@ $(EXEC): $(OBJ)
 	$(CC) $(CFLAGS) -o $(EXEC) $(OBJ)
 
 client2.o: client2.c client2.h 
-	$(CC) $(CFLAGS) -c server2.c
+	$(CC) $(CFLAGS) -c client2.c
 
 clean:
 	rm -f $(OBJ) $(EXEC)

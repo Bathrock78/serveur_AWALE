@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 #include "plateau.h"
 
 void init_board(Plateau *board) {
@@ -40,7 +41,6 @@ void afficher_plateau(char* buffer, int BUF_SIZE, Plateau *board, int score1, co
         strncat(buffer, " <-- you ", BUF_SIZE - strlen(buffer) - 1);
     }
     strncat(buffer, "\n", BUF_SIZE - strlen(buffer) - 1);
-    return buffer;
 }
 
 int deplacer(int position, int *plateau) {
