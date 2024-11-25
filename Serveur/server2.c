@@ -10,7 +10,8 @@
 #include "client2.h"
 #include "partie.h"
 
-#define TIME_LIMIT 20
+#define TIME_LIMIT 60
+#define MAX_PARTIES 20
 
 static void init(void)
 {
@@ -37,6 +38,7 @@ static void app(void)
    SOCKET sock = init_connection();
    char buffer[BUF_SIZE];
    char buffer_plateau[BUF_SIZE];
+   bool avertissements_envoyes[MAX_PARTIES] = { false };
    /* the index for the array */
    int actual = 0;
    int max = sock;
@@ -69,11 +71,19 @@ static void app(void)
          FD_SET(clients[i].sock, &rdfs);
       }
 
-      if(select(max + 1, &rdfs, NULL, NULL, NULL) == -1)
+      /*if(select(max + 1, &rdfs, NULL, NULL, NULL) == -1)
       {
          perror("select()");
          exit(errno);
-      }
+      }*/
+      // Appeler select() avec un timeout pour éviter un blocage long
+         struct timeval timeout = {0, 500000}; // 0.5 seconde
+         if (select(max + 1, &rdfs, NULL, NULL, &timeout) < 0) {
+            perror("select()");
+            continue;
+         }
+         verifier_temps(parties_en_cours, clients, MAX_PARTIES, actual,avertissements_envoyes);
+
 
       /* something from standard input : i.e keyboard */
       if(FD_ISSET(STDIN_FILENO, &rdfs))
@@ -137,13 +147,15 @@ static void app(void)
                      if (!strcmp(parties_en_cours[i]->joueur_actuel->pseudo, c.name)){
                         strncpy(buffer, "C'est à vous de jouer !\n", BUF_SIZE - 1);
                         afficher_plateau(buffer_plateau, BUF_SIZE, parties_en_cours[i]->plateau, parties_en_cours[i]->joueur1->score, 
-                        parties_en_cours[i]->joueur1->pseudo, parties_en_cours[i]->joueur2->score, parties_en_cours[i]->joueur2->pseudo);
+                        parties_en_cours[i]->joueur1->pseudo, parties_en_cours[i]->joueur2->score, parties_en_cours[i]->joueur2->pseudo,c.name);
                         write_client(c.sock, buffer_plateau);
                         c.etat = PARTIE_TOUR;
+                        c.adversaire->etat = PARTIE_ATTENTE;
                      }
                      else{
                         strncpy(buffer, "C'est à votre adversaire de jouer !\n", BUF_SIZE - 1);
                         c.etat = PARTIE_ATTENTE;
+                        c.adversaire->etat = PARTIE_TOUR;
                      }
                      write_client(c.sock, buffer);
                      verif_partie = 1;
@@ -175,42 +187,7 @@ static void app(void)
             /* a client is talking */
             if(FD_ISSET(clients[i].sock, &rdfs))
             {
-               for (int i = 0; i < 20; i++){
-                  if (parties_en_cours[i] != NULL){
-                     if (parties_en_cours[i]->joueur_actuel != NULL) {
-                        time_t now = time(NULL);
-                        double elapsed = difftime(now, parties_en_cours[i]->debut_tour);
-                        printf("Partie[%d]: elapsed = %.f seconds\n", i, elapsed);
-                        if (difftime(now, parties_en_cours[i]->debut_tour) >= TIME_LIMIT-10 && difftime(now, parties_en_cours[i]->debut_tour) < TIME_LIMIT) {
-                           for (int j = 0; j < actual; j++){
-                              if (clients[j].num_partie == i && clients[j].etat == PARTIE_TOUR){
-                                 snprintf(buffer, BUF_SIZE, "Attention ! il vous reste 10 secondes pour jouer.\n");
-                                 write_client(clients[j].sock, buffer);
-                              }
-                           }
-                        }
-                        else if (difftime(now, parties_en_cours[i]->debut_tour) >= TIME_LIMIT) {
-                           snprintf(buffer, BUF_SIZE, "Temps écoulé ! Vous perdez la partie.\n");
-                           end_partie(&parties_en_cours[i]);
-                           parties_en_cours[i] = NULL;
-                           actual_partie --;
-                           for (int j = 0; j < actual; j++){
-                              if (clients[j].num_partie == i && clients[j].etat == PARTIE_TOUR){
-                                 clients[j].num_partie = -1;
-                                 clients[j].adversaire->num_partie = -1;
-                                 clients[j].etat = MENU;
-                                 clients[j].adversaire->etat = MENU;
-                                 write_client(clients[j].sock, buffer);
-                                 choisir_option(clients[j]);
-                                 strncpy(buffer, "Votre adversaire s'est déconnecté. Vous remportez la partie !\n", BUF_SIZE - 1);
-                                 write_client(clients[j].adversaire->sock, buffer);
-                                 choisir_option(*(clients[j].adversaire));
-                              }
-                           }
-                        }
-                     }
-                  }
-               }
+               
                Client client = clients[i];
                int c = read_client(clients[i].sock, buffer);
                /* client disconnected */
@@ -338,8 +315,9 @@ static void app(void)
                               clients[i].adversaire->etat = PARTIE_TOUR;
                               clients[i].etat = PARTIE_ATTENTE;
                            }
-                           afficher_plateau(buffer_plateau, BUF_SIZE, partie->plateau, partie->joueur1->score, partie->joueur1->pseudo, partie->joueur2->score, partie->joueur2->pseudo);
+                           afficher_plateau(buffer_plateau, BUF_SIZE, partie->plateau, partie->joueur1->score, partie->joueur1->pseudo, partie->joueur2->score, partie->joueur2->pseudo,clients[i].name);
                            write_client(clients[i].sock, buffer_plateau);
+                           afficher_plateau(buffer_plateau, BUF_SIZE, partie->plateau, partie->joueur1->score, partie->joueur1->pseudo, partie->joueur2->score, partie->joueur2->pseudo,clients[i].adversaire->name);
                            write_client(clients[i].adversaire->sock, buffer_plateau);
                            partie->debut_tour = time(NULL);
                         }else if(strcmp(buffer, "REFUSER") == 0){
@@ -368,12 +346,13 @@ static void app(void)
                      case PARTIE_TOUR:
                         int choix = atoi(buffer);
                         partie = parties_en_cours[clients[i].num_partie];
+                        partie->debut_tour = time(NULL);
 
                         //Choix de la case à jouer
                         if (choix < 1 || choix > 12) {
                            strncpy(buffer, "Choix invalide. Veuillez choisir une case entre 1 et 12.\n", BUF_SIZE - 1);
                            write_client(clients[i].sock, buffer);
-                           afficher_plateau(buffer_plateau, BUF_SIZE, partie->plateau, partie->joueur1->score, partie->joueur1->pseudo, partie->joueur2->score, partie->joueur2->pseudo);
+                           afficher_plateau(buffer_plateau, BUF_SIZE, partie->plateau, partie->joueur1->score, partie->joueur1->pseudo, partie->joueur2->score, partie->joueur2->pseudo,clients[i].name);
                            write_client(clients[i].sock, buffer);
                            break;
                            
@@ -383,7 +362,7 @@ static void app(void)
                         (partie->joueur_actuel == partie->joueur2 && (choix < 7 || choix > 12))) {
                            strncpy(buffer, "Choix invalide. Vous devez choisir une case de votre propre camp.\n", BUF_SIZE - 1);
                            write_client(clients[i].sock, buffer);
-                           afficher_plateau(buffer_plateau, BUF_SIZE, partie->plateau, partie->joueur1->score, partie->joueur1->pseudo, partie->joueur2->score, partie->joueur2->pseudo);
+                           afficher_plateau(buffer_plateau, BUF_SIZE, partie->plateau, partie->joueur1->score, partie->joueur1->pseudo, partie->joueur2->score, partie->joueur2->pseudo,clients[i].name);
                            write_client(clients[i].sock, buffer_plateau);
                            break;
                         }
@@ -391,13 +370,14 @@ static void app(void)
                         if (!deplacement(choix - 1, partie->plateau, partie->joueur_actuel)) {
                            strncpy(buffer, "Déplacement non valide, choisissez une autre case.\n", BUF_SIZE - 1);
                            write_client(clients[i].sock, buffer);
-                           afficher_plateau(buffer_plateau, BUF_SIZE, partie->plateau, partie->joueur1->score, partie->joueur1->pseudo, partie->joueur2->score, partie->joueur2->pseudo);
+                           afficher_plateau(buffer_plateau, BUF_SIZE, partie->plateau, partie->joueur1->score, partie->joueur1->pseudo, partie->joueur2->score, partie->joueur2->pseudo,clients[i].name);
                            write_client(clients[i].sock, buffer_plateau);
                            break;
                         }
                         if(!finDePartie(partie)){
-                           afficher_plateau(buffer_plateau, BUF_SIZE, partie->plateau, partie->joueur1->score, partie->joueur1->pseudo, partie->joueur2->score, partie->joueur2->pseudo);
+                           afficher_plateau(buffer_plateau, BUF_SIZE, partie->plateau, partie->joueur1->score, partie->joueur1->pseudo, partie->joueur2->score, partie->joueur2->pseudo,clients[i].name);
                            write_client(clients[i].sock, buffer_plateau);
+                           afficher_plateau(buffer_plateau, BUF_SIZE, partie->plateau, partie->joueur1->score, partie->joueur1->pseudo, partie->joueur2->score, partie->joueur2->pseudo,clients[i].adversaire->name);
                            write_client(clients[i].adversaire->sock, buffer_plateau);
                            strncpy(buffer, "En attente coup adversaire !\n", BUF_SIZE - 1);
                            write_client(clients[i].sock, buffer);
@@ -507,6 +487,60 @@ void choisir_option(Client c){
    write_client(c.sock, buffer);
 }
 
+void verifier_temps(Partie *parties[], Client clients[], int nb_parties, int nb_clients, bool avertissements_envoyes[]) {
+   char buffer[BUF_SIZE];
+    time_t maintenant = time(NULL);
+
+    for (int p = 0; p < nb_parties; p++) {
+        Partie *partie = parties[p];
+        if (partie == NULL) continue;
+
+        time_t temps_ecoule = difftime(maintenant, partie->debut_tour);
+
+        if (temps_ecoule >= TIME_LIMIT - 20 && temps_ecoule < TIME_LIMIT) {
+            // Envoyer un avertissement à l'utilisateur
+            if (!avertissements_envoyes[p]){
+               for (int c = 0; c < nb_clients; c++) {
+                  if (clients[c].num_partie == p && clients[c].etat == PARTIE_TOUR) {
+                     snprintf(buffer, BUF_SIZE, "Attention ! Il vous reste 20 secondes pour jouer.\n");
+                     write_client(clients[c].sock, buffer);
+                  }
+               }
+               avertissements_envoyes[p] = true;
+            }
+            
+        } else if (temps_ecoule >= TIME_LIMIT) {
+            // Temps écoulé, le joueur perd la partie
+            Joueur *perdant = partie->joueur_actuel;
+            Joueur *gagnant = (perdant == partie->joueur1) ? partie->joueur2 : partie->joueur1;
+
+            snprintf(buffer, BUF_SIZE, "Temps écoulé ! %s a perdu la partie.\n", perdant->pseudo);
+            for (int c = 0; c < nb_clients; c++) {
+                if (clients[c].num_partie == p) {
+                    write_client(clients[c].sock, buffer);
+                }
+            }
+
+            // Terminer la partie
+            end_partie(&parties[p]);
+
+            for (int c = 0; c < nb_clients; c++) {
+                if (clients[c].num_partie == p) {
+                    clients[c].num_partie = -1;
+                    choisir_option(clients[c]);
+                    clients[c].etat = MENU;
+                }
+            }
+            avertissements_envoyes[p] = false;
+        }else{
+            if (temps_ecoule < TIME_LIMIT - 10) {
+                avertissements_envoyes[p] = false;
+            }
+        }
+    }
+}
+
+
 static void clear_clients(Client *clients, int actual)
 {
    int i = 0;
@@ -595,6 +629,7 @@ static int read_client(SOCKET sock, char *buffer)
 
    return n;
 }
+
 
 static void write_client(SOCKET sock, const char *buffer)
 {

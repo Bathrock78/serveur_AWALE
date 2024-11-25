@@ -6,7 +6,7 @@ typedef struct Plateau {
 }Plateau;
 
 void init_board(Plateau *board);
-void afficher_plateau(char* buffer, int buf_size, Plateau *board, int score1, const char* pseudo1, int score2, const char* pseudo2);
+void afficher_plateau(char* buffer, int buf_size, Plateau *board, int score1, const char* pseudo1, int score2, const char* pseudo2,const char* clientPseudo);
 int deplacer(int position, int *plateau);
 bool test_validite_coup(int *plateau);
 

@@ -2,7 +2,7 @@
 EXEC = awale
 
 CC = gcc
-CFLAGS = -Wall
+CFLAGS = -Wall -g
 
 SRC = plateau.c partie.c joueur.c server2.c 
 OBJ = $(SRC:.c=.o)

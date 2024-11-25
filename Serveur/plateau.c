@@ -8,7 +8,7 @@ void init_board(Plateau *board) {
     }
 }
 
-void afficher_plateau(char* buffer, int BUF_SIZE, Plateau *board, int score1, const char* pseudo1, int score2, const char* pseudo2) {
+void afficher_plateau(char* buffer, int BUF_SIZE, Plateau *board, int score1, const char* pseudo1, int score2, const char* pseudo2, const char* clientPseudo) {
     strncpy(buffer, "\n", BUF_SIZE - 1);
     char mini_buffer[BUF_SIZE];
     snprintf(mini_buffer, BUF_SIZE, "Score : %s - %d | %s - %d\n", pseudo1, score1, pseudo2, score2);
@@ -22,6 +22,9 @@ void afficher_plateau(char* buffer, int BUF_SIZE, Plateau *board, int score1, co
         if (i > 0) {
             strncat(buffer, " | ", BUF_SIZE - strlen(buffer) - 1);
         }
+    } 
+    if(!strcmp(clientPseudo,pseudo1)){
+        strncat(buffer, " <-- you ", BUF_SIZE - strlen(buffer) - 1);
     }
     strncat(buffer, "\n", BUF_SIZE - strlen(buffer) - 1);
 
@@ -32,6 +35,9 @@ void afficher_plateau(char* buffer, int BUF_SIZE, Plateau *board, int score1, co
         if (i < 11) {
             strncat(buffer, " | ", BUF_SIZE - strlen(buffer) - 1);
         }
+    }
+    if(!strcmp(clientPseudo,pseudo2)){
+        strncat(buffer, " <-- you ", BUF_SIZE - strlen(buffer) - 1);
     }
     strncat(buffer, "\n", BUF_SIZE - strlen(buffer) - 1);
     return buffer;
