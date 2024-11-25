@@ -136,9 +136,9 @@ static void app(void)
                if (parties_en_cours[i] != NULL){
                   if (!strcmp(parties_en_cours[i]->joueur1->pseudo, c.name) || !strcmp(parties_en_cours[i]->joueur2->pseudo, c.name)){
                      if(!strcmp(parties_en_cours[i]->joueur1->pseudo, c.name)){
-                        c.adversaire = &clients[parties_en_cours[i]->client_2];
+                        c.adversaire = parties_en_cours[i]->client_2;
                      }else{
-                        c.adversaire = &clients[parties_en_cours[i]->client_1];
+                        c.adversaire = parties_en_cours[i]->client_1;
                      }
                      
                      strncpy(buffer, "Vous êtes déjà dans une partie en cours !\n", BUF_SIZE - 1);
@@ -263,10 +263,10 @@ static void app(void)
                               clients[i].adversaire = &clients[j];
                               clients[i].adversaire->adversaire = &clients[i];
                               Partie* partie = init_partie(clients[i].name, clients[j].name);
-                              partie->client_1 = i;
-                              partie->client_2 = j;
+                              partie->client_2 = &clients[j];
+                              partie->client_1 = &clients[i];
                               choix_partie(clients[i],clients[j]);
-                              clients[i].adversaire->etat = REPONDRE_DEMANDE_PARTIE;
+                              clients[j].etat = REPONDRE_DEMANDE_PARTIE;
                               break;
                            }
                         }
@@ -286,6 +286,8 @@ static void app(void)
                            snprintf(buffer, BUF_SIZE, "Partie avec %s acceptée. La partie va commencer\n", clients[i].name);
                            write_client(clients[i].adversaire->sock, buffer);
                            Partie* partie = init_partie(clients[i].adversaire->name,clients[i].name);
+                           partie->client_2 = &clients[i].adversaire;
+                           partie->client_1 = &clients[i];
 
                            //on parcourt les parties en cours pour trouver une place libre
                            for (int j = 0; j < 20; j++){

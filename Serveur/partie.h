@@ -3,6 +3,7 @@
 
 #include "plateau.h"
 #include "joueur.h"
+#include "client2.h"
 
 typedef struct Partie { 
     Plateau *plateau;
@@ -10,8 +11,8 @@ typedef struct Partie {
     Joueur *joueur2;
     Joueur *joueur_actuel;
     int tour_sans_prise_consecutif;
-    int client_1;
-    int client_2;
+    Client* client_1;
+    Client* client_2;
     time_t debut_tour;
 }Partie ;
 

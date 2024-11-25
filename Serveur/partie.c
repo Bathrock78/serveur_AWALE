@@ -174,41 +174,6 @@ Partie* init_partie(const char* pseudo1, const char * pseudo2){
 
     return partie_en_cours;
 }
-/*void lancer_partie(Partie partie_en_cours,int choix){
-
-    while (!finDePartie(partie_en_cours)) {
-        //afficher_plateau(board);
-        //printf("Tour de %s (score : %d)\n", partie_en_cours->joueur_actuel->pseudo, partie_en_cours->joueur_actuel->score);
-        
-        /*int choix;
-        printf("Choisissez une case : ");
-        scanf("%d", &choix);
-
-        if (choix < 1 || choix > 12) {
-            printf("Choix invalide. Veuillez choisir une case entre 1 et 12.\n");
-            continue;
-        }
-
-        if ((partie_en_cours->joueur_actuel == partie_en_cours->joueur1 && (choix < 1 || choix > 6)) ||
-        (partie_en_cours->joueur_actuel == partie_en_cours->joueur2 && (choix < 7 || choix > 12))) {
-            printf("Choix invalide. Vous devez choisir une case de votre propre camp.\n");
-            continue;
-        }
-
-        if (!deplacement(choix - 1, board, partie_en_cours->joueur_actuel)) {
-            printf("Déplacement non valide, choisissez une autre case.\n");
-            continue;
-        }
-
-        partie_en_cours->joueur_actuel = (partie_en_cours->joueur_actuel == partie_en_cours->joueur1) ? partie_en_cours->joueur2 : partie_en_cours->joueur1;
-    }
-
-    Joueur *gagnant = vainqueur(partie_en_cours);
-    if (gagnant != NULL) {
-        printf("Le gagnant est %s avec %d points!\n", gagnant->pseudo, gagnant->score);
-    }
-
-}*/
 
 void end_partie(Partie** partie){
     if (*partie != NULL) {
